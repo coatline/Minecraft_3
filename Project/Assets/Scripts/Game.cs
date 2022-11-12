@@ -5,20 +5,25 @@ using UnityEngine;
 
 public class Game : MonoBehaviour
 {
+    public World World { get; private set; }
+
+    [SerializeField] byte maxTerrainHeight;
     [SerializeField] TMP_Text seedNumber;
+    [SerializeField] Player playerPrefab;
     [SerializeField] string seed;
-    World world;
 
     void Awake()
     {
-        world = new World(150, 255, 40, seed);
+        World = new World(maxTerrainHeight, 255, 40, seed, playerPrefab);
+
+        if (World.StringSeed == "")
+            seedNumber.text = World.Seed.ToString();
+        else
+            seedNumber.text = World.StringSeed;
     }
 
-    private void Start()
+    private void Update()
     {
-        if (world.StringSeed == "")
-            seedNumber.text = world.Seed.ToString();
-        else
-            seedNumber.text = world.StringSeed;
+        World.Update(Time.deltaTime);
     }
 }

@@ -19,8 +19,9 @@ public class Chunk
 
     // Holds all necessary data for a given chunk
 
-    public event System.Action<Vector2Int> Unloaded;
     public event System.Action<Vector2Int, Chunk> Generated;
+    public event System.Action<Vector2Int> Unloaded;
+    public event System.Action MeshDataReady;
 
     // Chunk coordinates
     public int X { get; private set; }
@@ -31,6 +32,7 @@ public class Chunk
 
     public List<Vector3Int> blocksToBuildFaceOn { get; private set; }
     public Vector2Int GenerationDirection { get; private set; }
+
     byte[,] heightMap;
     byte[,,] blocks;
 
@@ -40,6 +42,7 @@ public class Chunk
         X = chunkX;
         Y = chunkY;
         Size = size;
+        WorldBuilder = worldBuilder;
         waterLevel = world.WaterLevel;
         HeightLimit = world.HeightLimit;
         maxTerrainHeight = world.MaxTerrainHeight;
@@ -51,12 +54,19 @@ public class Chunk
         bedrock = DataLibrary.I.Blocks["Bedrock"].Id;
     }
 
+    /// <summary>
+    /// This is used so that we can generate the values before generating the mesh so that there aren't problems with the chunks depending on each other
+    /// </summary>
+    public void CallGenerated() => Generated?.Invoke(new Vector2Int(X, Y), this);
+
+    public void CallMeshDataReady() => MeshDataReady?.Invoke();
+
     public void GenerateAt(int chunkX, int chunkY)
     {
+        GenerationDirection = new Vector2Int(chunkX - X, chunkY - Y);
+
         X = chunkX;
         Y = chunkY;
-
-        GenerationDirection = new Vector2Int(X - chunkX, Y - chunkY).m;
 
         Generate();
         Generated?.Invoke(new Vector2Int(X, Y), this);
@@ -116,9 +126,15 @@ public class Chunk
                         else
                             blocks[x, y, z] = grass;
                     }
-                    else
-                        blocks[x, y, z] = dirt;
+                    else /*if (height - y <= 3)*/
+                    {
+                        //if (y > height)
+                        //    blocksToBuildFaceOn.Add(new Vector3Int(x, y, z));
 
+                        blocks[x, y, z] = dirt;
+                    }
+                    //else
+                    //    blocks[x, y, z] = stone;
 
                     #region commented
                     //    #region tree
@@ -213,6 +229,13 @@ public class Chunk
         }
     }
 
+    // https://www.reddit.com/r/gamedev/comments/16yyqw/how_does_minecraft_generate_structures_especially/?adlt=strict&toWww=1&redig=DC22031311094992A7DD3D3732E3A052
+    void GenerateStructures()
+    {
+        // Generate rivers from tops of mountains to end point like a lake or ocean (polywhoreism's comment)
+
+    }
+
     int queuedX;
     int queuedY;
 
@@ -238,14 +261,7 @@ public class Chunk
         get => blocks[x, y, z];
     }
 
-    // https://www.reddit.com/r/gamedev/comments/16yyqw/how_does_minecraft_generate_structures_especially/?adlt=strict&toWww=1&redig=DC22031311094992A7DD3D3732E3A052
-    void GenerateStructures()
-    {
-        // Generate rivers from tops of mountains to end point like a lake or ocean (polywhoreism's comment)
-
-    }
-
-    byte GetHeightAt(int x, int y) => (byte)(OctavePerlin(x, y, 1, .01f, 1) * maxTerrainHeight);
+    byte GetHeightAt(int x, int y) => (byte)(OctavePerlin(x, y, 5, .01f, .5f) * maxTerrainHeight);
 
     // Reference:
     // http://adrianb.io/2014/08/09/perlinnoise.html?adlt=strict&toWww=1&redig=5489DC280FC64EBFA66408624C5F6F80
@@ -280,4 +296,6 @@ public class Chunk
         float noiseValue = Mathf.PerlinNoise((x + seedDependentOffset.x + WorldX) * frequency, (y + seedDependentOffset.y + WorldY) * frequency) * amplitude;
         return Mathf.Clamp01(noiseValue);
     }
+
+    public int GetHeightMapAt(int x, int y) => heightMap[x, y] + waterLevel;
 }

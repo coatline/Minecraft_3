@@ -2,28 +2,16 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MeshData
+public class MeshBuilder
 {
-    //readonly List<Vector3Int> blocksToRecheck;
-    //readonly List<Vector3Int> blocksToBuildFaceOn;
+    readonly WorldBuilder worldBuilder;
+    readonly Chunk chunk;
 
-    Chunk chunk;
-
-    public MeshData(Chunk chunk)
+    public MeshBuilder(Chunk chunk)
     {
+        this.worldBuilder = chunk.WorldBuilder;
         this.chunk = chunk;
     }
-
-    //public void Reset()
-    //{
-    //    blocksToBuildFaceOn.Clear();
-    //    blocksToRecheck.Clear();
-    //}
-
-    //public void AddBlockToBuildFaceOn(Vector3Int pos)
-    //{
-    //    blocksToBuildFaceOn.Add(pos);
-    //}
 
     List<Vector3> verts = new List<Vector3>();
     List<Vector2> uvs = new List<Vector2>();
@@ -45,164 +33,147 @@ public class MeshData
         //Chunk leftChunk = chunk.cl.GetChunkFromChunkCoords(chunk.chunkCoords + new Vector2Int(-1, 0));
         //Chunk rightChunk = chunk.cl.GetChunkFromChunkCoords(chunk.chunkCoords + new Vector2Int(1, 0));
 
-        for (int i = 0; i < blocksToBuildFaceOn.Count; i++)
-        {
-            int x = blocksToBuildFaceOn[i].x;
-            int y = blocksToBuildFaceOn[i].y;
-            int z = blocksToBuildFaceOn[i].z;
+        // Check all neighboring chunks for building a face
+        bool checkAllChunkBorders = chunk.GenerationDirection.magnitude == 0;
 
-            int blockId = chunk[x, y, z];
-
-            // If the block is air or water, continue
-            if (blockId == 0 || blockId == 12)
-                continue;
-
-            Block block = BlockLoader.I.GetBlock(blockId);
-
-            Vector3Int blockPos = new Vector3Int(x, y, z);
-
-            #region TopAndBottom
-
-            //create face on top of block
-            if (y < chunk.HeightLimit - 1)
-                if (IsTransparent(chunk[x, y + 1, z]))
-                    AddTopFace(blockPos, block);
-
-            //create face on bottom of block
-            if (y > 0)
-                if (IsTransparent(chunk[x, y - 1, z]))
-                    AddBottomFace(blockPos, block);
-
-            #endregion
-
-            #region ChunkBorders
-
-            //create face on left of block
-            if (x > 0)
-                if (IsTransparent(chunk[x - 1, y, z]))
-                    AddLeftFace(blockPos, block);
-
-            //else
-            //{
-            //    if (leftChunk)
-            //    {
-            //        while (leftChunk.generatingValues)
-            //        {
-            //            Thread.Sleep(1);
-            //        }
-
-            //        if (leftChunk.d.blocks[ChunkData.SIZE - 1, y, z] == 0 || leftChunk.meshData.GetBlockAt(ChunkData.SIZE - 1, y, z).transparent)
-            //        {
-            //            AddLeftFace(blockPos, block);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        blocksToRecheck.Add(blockPos);
-            //    }
-            //}
-
-            //create face on right of block
-            if (x < chunk.Size - 1)
-                if (IsTransparent(chunk[x + 1, y, z]))
-                    AddRightFace(blockPos, block);
-            //else
-            //{
-            //    if (rightChunk)
-            //    {
-            //        while (rightChunk.generatingValues)
-            //        {
-            //            Thread.Sleep(1);
-            //        }
-
-            //        if (rightChunk.d.blocks[0, y, z] == 0 || rightChunk.meshData.GetBlockAt(0, y, z).transparent)
-            //        {
-            //            AddRightFace(blockPos, block);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        blocksToRecheck.Add(blockPos);
-            //    }
-            //}
-
-            //create face on front of block
-            if (z < chunk.Size - 1)
-                if (IsTransparent(chunk[x, y, z + 1]))
-                    AddFrontFace(blockPos, block);
-
-            //else
-            //{
-            //    if (topChunk)
-            //    {
-            //        while (topChunk.generatingValues)
-            //        {
-            //            Thread.Sleep(1);
-            //        }
-
-            //        if (topChunk.d.blocks[x, y, 0] == 0 || topChunk.meshData.GetBlockAt(x, y, 0).transparent)
-            //        {
-            //            AddFrontFace(blockPos, block);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        blocksToRecheck.Add(blockPos);
-            //    }
-            //}
-
-            //create face on back of block
-            if (z > 0)
+        for (int x = 0; x < chunk.Size; x++)
+            for (int z = 0; z < chunk.Size; z++)
             {
-                if (chunk[x, y, z - 1] == 0 /*|| GetBlockAt(x, y, z - 1).transparent*/)
+                int height = chunk.GetHeightMapAt(x, z);
+                for (int y = 0; y < height; y++)
                 {
-                    AddBackFace(blockPos, block);
+                    //int x = blocksToBuildFaceOn[y].x;
+                    //int y = blocksToBuildFaceOn[y].y;
+                    //int z = blocksToBuildFaceOn[y].z;
+
+                    int blockId = chunk[x, y, z];
+
+                    // If the block is air or water, continue
+                    if (blockId == 0 || blockId == 12)
+                        continue;
+
+                    Block block = BlockLoader.I.GetBlock(blockId);
+
+                    Vector3Int blockPos = new Vector3Int(x, y, z);
+
+                    #region TopAndBottom
+
+                    //create face on top of block
+                    if (y < chunk.HeightLimit - 1)
+                        if (IsTransparent(chunk[x, y + 1, z]))
+                            AddTopFace(blockPos, block);
+
+                    //create face on bottom of block
+                    if (y > 0)
+                        if (IsTransparent(chunk[x, y - 1, z]))
+                            AddBottomFace(blockPos, block);
+
+                    #endregion
+
+                    #region ChunkBorders
+
+                    // If we are not checking out of bounds (Checking west)
+                    if (x > 0)
+                    {
+                        if (IsTransparent(chunk[x - 1, y, z]))
+                            AddLeftFace(blockPos, block);
+                    }
+                    // We were generated east of the player, check west.
+                    else /*if (chunk.GenerationDirection.x > 0 || checkAllChunkBorders)*/
+                    {
+                        Chunk westChunk = worldBuilder.TryGetChunkAt(new Vector2Int(chunk.X - 1, chunk.Y));
+
+                        if (westChunk != null)
+                        {
+                            if (IsTransparent(westChunk[westChunk.Size - 1, y, z]))
+                            {
+                                //Debug.Log($"{chunk.X}, {chunk.Y}, {westChunk.X}, {westChunk.Y} west");
+                                AddLeftFace(blockPos, block);
+                            }
+                        }
+                        //else
+                        //{
+                        //    Debug.Log("oof west");
+                        //}
+                    }
+
+                    // If we are not checking out of bounds (Checking east)
+                    if (x < chunk.Size - 1)
+                    {
+                        if (IsTransparent(chunk[x + 1, y, z]))
+                            AddRightFace(blockPos, block);
+                    }
+                    // We were generated west of the player, check east.
+                    else /*if (chunk.GenerationDirection.x < 0 || checkAllChunkBorders)*/
+                    {
+                        Chunk eastChunk = worldBuilder.TryGetChunkAt(new Vector2Int(chunk.X + 1, chunk.Y));
+
+                        if (eastChunk != null)
+                        {
+                            if (IsTransparent(eastChunk[0, y, z]))
+                            {
+                                //Debug.Log($"{chunk.X}, {chunk.Y}, {eastChunk.X}, {eastChunk.Y} east");
+                                AddRightFace(blockPos, block);
+                            }
+                        }
+                        //else
+                        //{
+                        //    Debug.Log("oof east");
+                        //}
+                    }
+
+                    // If we are not checking out of bounds (Check north)
+                    if (z < chunk.Size - 1)
+                    {
+                        if (IsTransparent(chunk[x, y, z + 1]))
+                            AddFrontFace(blockPos, block);
+                    }
+                    // We were generated south of the player, check north.
+                    else /*if (chunk.GenerationDirection.y < 0 || checkAllChunkBorders)*/
+                    {
+                        Chunk northChunk = worldBuilder.TryGetChunkAt(new Vector2Int(chunk.X, chunk.Y + 1));
+
+                        if (northChunk != null)
+                        {
+                            if (IsTransparent(northChunk[x, y, 0]))
+                            {
+                                //Debug.Log($"{chunk.X}, {chunk.Y}, {northChunk.X}, {northChunk.Y} north");
+                                AddFrontFace(blockPos, block);
+                            }
+                        }
+                        //else
+                        //{
+                        //    Debug.Log("oof north");
+                        //}
+                    }
+
+                    // If we are not checking out of bounds (Check south)
+                    if (z > 0)
+                    {
+                        if (IsTransparent(chunk[x, y, z - 1]))
+                            AddBackFace(blockPos, block);
+                    }
+                    // We were generated north of the player, check south.
+                    else /*if (chunk.GenerationDirection.y > 0 || checkAllChunkBorders)*/
+                    {
+                        Chunk southChunk = worldBuilder.TryGetChunkAt(new Vector2Int(chunk.X, chunk.Y - 1));
+
+                        if (southChunk != null)
+                        {
+
+                            if (IsTransparent(southChunk[x, y, southChunk.Size - 1]))
+                            {
+                                //Debug.Log($"{chunk.X}, {chunk.Y}, {southChunk.X}, {southChunk.Y} south");
+                                AddBackFace(blockPos, block);
+                            }
+                        }
+                        //else
+                        //{
+                        //    Debug.Log("oof south");
+                        //}
+                    }
                 }
             }
-            //else
-            //{
-            //    if (bottomChunk)
-            //    {
-            //        while (bottomChunk.generatingValues)
-            //        {
-            //            Thread.Sleep(1);
-            //        }
-
-            //        if (bottomChunk.d.blocks[x, y, ChunkData.SIZE - 1] == 0 || bottomChunk.meshData.GetBlockAt(x, y, ChunkData.SIZE - 1).transparent)
-            //        {
-            //            AddBackFace(blockPos, block);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        blocksToRecheck.Add(blockPos);
-            //    }
-            //}
-
-            #endregion
-
-            #region AddTriangles
-
-            ////int tl = verts.Count - (4 * faces);
-
-            ////for (int k = 0; k < faces; k++)
-            ////{
-            ////    //for each face, add 6 vertices's index
-            ////    triangles.AddRange(new int[] { tl + (k * 4), tl + (k * 4) + 1, tl + (k * 4) + 2, tl + (k * 4) + 2, tl + (k * 4) + 1, tl + (k * 4) + 3 });
-            ////}
-
-            #endregion
-        }
-
-        //if((!topChunk && !leftChunk) || (!topChunk && !rightChunk) || (!bottomChunk && !leftChunk) || (!bottomChunk && !rightChunk))
-        //{
-        //    print("COORNER");
-        //}
-        //else
-        //while (bottomChunk.regenerating)
-        //{
-        //    Thread.Sleep(1);
-        //}
 
         //for (int k = 0; k < bottomChunk.meshData.blocksToRecheck.Count; k++)
         //{
@@ -215,6 +186,8 @@ public class MeshData
         //        AddFrontFace(new Vector3Int(pos.x, pos.y, -1), bottomChunk.meshData.GetBlockAt(pos.x, pos.y, pos.z));
         //    }
         //}
+
+        #endregion
 
         #region AddFaceFunctions
 
