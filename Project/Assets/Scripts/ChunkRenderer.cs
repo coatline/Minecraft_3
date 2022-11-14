@@ -9,30 +9,37 @@ public class ChunkRenderer : MonoBehaviour
     [SerializeField] MeshFilter terrainFilter;
     MeshBuilder meshBuilder;
     Mesh terrainMesh;
-
-    Vector3 nextPosition;
+    Chunk chunk;
 
     public void Setup(Chunk chunk)
     {
+        this.chunk = chunk;
+
         terrainMesh = new Mesh();
         meshBuilder = new MeshBuilder(chunk);
 
         terrainFilter.sharedMesh = terrainMesh;
-
-        chunk.MeshDataReady += MeshDataReady;
-        chunk.Generated += ChunkGenerated;
     }
 
-    void MeshDataReady()
+    public void GenerateInitialMesh()
+    {
+        GenerateMesh();
+        chunk.InitialMeshComplete();
+    }
+
+    public void GenerateMesh()
+    {
+        meshBuilder.BuildMesh(chunk.BlocksToBuildFaceOn);
+    }
+
+    public void AssignMesh()
     {
         meshBuilder.AssignMesh(terrainMesh, terrainCollider);
-        transform.position = nextPosition;
+        transform.position = new Vector3(chunk.WorldX, 0, chunk.WorldY);
     }
 
-    void ChunkGenerated(Vector2Int position, Chunk chunk)
+    public void UpdateBorder(Vector2Int border)
     {
-        meshBuilder.BuildMesh(chunk.blocksToBuildFaceOn);
 
-        nextPosition = new Vector3(position.x * chunk.Size, 0, position.y * chunk.Size);
     }
 }

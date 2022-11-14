@@ -15,7 +15,7 @@ public class World
     public readonly string StringSeed;
     public readonly int Seed;
 
-    public World(byte maxTerrainHeight, byte heightLimit, byte waterLevel, string stringSeed, Player playerPrefab)
+    public World(byte maxTerrainHeight, byte heightLimit, byte waterLevel, string stringSeed, Player playerPrefab, Game game)
     {
         MaxTerrainHeight = maxTerrainHeight;
         HeightLimit = heightLimit;
@@ -37,7 +37,7 @@ public class World
 
         NoiseOffset = new Vector2(Random.Range(-10000, 10000), Random.Range(-10000, 10000));
 
-        WorldBuilder = new WorldBuilder(SettingsManager.I.RenderDistance, 16, this, playerPrefab);
+        WorldBuilder = new WorldBuilder(SettingsManager.I.RenderDistance, 16, this, playerPrefab, game);
     }
 
     public void Update(float deltaTime)

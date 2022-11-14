@@ -14,7 +14,7 @@ public class Game : MonoBehaviour
 
     void Awake()
     {
-        World = new World(maxTerrainHeight, 255, 40, seed, playerPrefab);
+        World = new World(maxTerrainHeight, 255, 40, seed, playerPrefab, this);
 
         if (World.StringSeed == "")
             seedNumber.text = World.Seed.ToString();

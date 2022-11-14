@@ -78,24 +78,24 @@ public class MeshBuilder
                         if (IsTransparent(chunk[x - 1, y, z]))
                             AddLeftFace(blockPos, block);
                     }
-                    // We were generated east of the player, check west.
-                    else /*if (chunk.GenerationDirection.x > 0 || checkAllChunkBorders)*/
-                    {
-                        Chunk westChunk = worldBuilder.TryGetChunkAt(new Vector2Int(chunk.X - 1, chunk.Y));
+                    //// We were generated east of the player, check west.
+                    //else /*if (chunk.GenerationDirection.x > 0 || checkAllChunkBorders)*/
+                    //{
+                    //    Chunk westChunk = worldBuilder.TryGetChunkAt(chunk.X - 1, chunk.Y);
 
-                        if (westChunk != null)
-                        {
-                            if (IsTransparent(westChunk[westChunk.Size - 1, y, z]))
-                            {
-                                //Debug.Log($"{chunk.X}, {chunk.Y}, {westChunk.X}, {westChunk.Y} west");
-                                AddLeftFace(blockPos, block);
-                            }
-                        }
-                        //else
-                        //{
-                        //    Debug.Log("oof west");
-                        //}
-                    }
+                    //    if (westChunk != null)
+                    //    {
+                    //        if (IsTransparent(westChunk[westChunk.Size - 1, y, z]))
+                    //        {
+                    //            //Debug.Log($"{chunk.X}, {chunk.Y}, {westChunk.X}, {westChunk.Y} west");
+                    //            AddLeftFace(blockPos, block);
+                    //        }
+                    //    }
+                    //    //else
+                    //    //{
+                    //    //    Debug.Log("oof west");
+                    //    //}
+                    //}
 
                     // If we are not checking out of bounds (Checking east)
                     if (x < chunk.Size - 1)
@@ -103,24 +103,24 @@ public class MeshBuilder
                         if (IsTransparent(chunk[x + 1, y, z]))
                             AddRightFace(blockPos, block);
                     }
-                    // We were generated west of the player, check east.
-                    else /*if (chunk.GenerationDirection.x < 0 || checkAllChunkBorders)*/
-                    {
-                        Chunk eastChunk = worldBuilder.TryGetChunkAt(new Vector2Int(chunk.X + 1, chunk.Y));
+                    //// We were generated west of the player, check east.
+                    //else /*if (chunk.GenerationDirection.x < 0 || checkAllChunkBorders)*/
+                    //{
+                    //    Chunk eastChunk = worldBuilder.TryGetChunkAt(chunk.X + 1, chunk.Y);
 
-                        if (eastChunk != null)
-                        {
-                            if (IsTransparent(eastChunk[0, y, z]))
-                            {
-                                //Debug.Log($"{chunk.X}, {chunk.Y}, {eastChunk.X}, {eastChunk.Y} east");
-                                AddRightFace(blockPos, block);
-                            }
-                        }
-                        //else
-                        //{
-                        //    Debug.Log("oof east");
-                        //}
-                    }
+                    //    if (eastChunk != null)
+                    //    {
+                    //        if (IsTransparent(eastChunk[0, y, z]))
+                    //        {
+                    //            //Debug.Log($"{chunk.X}, {chunk.Y}, {eastChunk.X}, {eastChunk.Y} east");
+                    //            AddRightFace(blockPos, block);
+                    //        }
+                    //    }
+                    //    //else
+                    //    //{
+                    //    //    Debug.Log("oof east");
+                    //    //}
+                    //}
 
                     // If we are not checking out of bounds (Check north)
                     if (z < chunk.Size - 1)
@@ -128,24 +128,24 @@ public class MeshBuilder
                         if (IsTransparent(chunk[x, y, z + 1]))
                             AddFrontFace(blockPos, block);
                     }
-                    // We were generated south of the player, check north.
-                    else /*if (chunk.GenerationDirection.y < 0 || checkAllChunkBorders)*/
-                    {
-                        Chunk northChunk = worldBuilder.TryGetChunkAt(new Vector2Int(chunk.X, chunk.Y + 1));
+                    //// We were generated south of the player, check north.
+                    //else /*if (chunk.GenerationDirection.y < 0 || checkAllChunkBorders)*/
+                    //{
+                    //    Chunk northChunk = worldBuilder.TryGetChunkAt(chunk.X, chunk.Y + 1);
 
-                        if (northChunk != null)
-                        {
-                            if (IsTransparent(northChunk[x, y, 0]))
-                            {
-                                //Debug.Log($"{chunk.X}, {chunk.Y}, {northChunk.X}, {northChunk.Y} north");
-                                AddFrontFace(blockPos, block);
-                            }
-                        }
-                        //else
-                        //{
-                        //    Debug.Log("oof north");
-                        //}
-                    }
+                    //    if (northChunk != null)
+                    //    {
+                    //        if (IsTransparent(northChunk[x, y, 0]))
+                    //        {
+                    //            //Debug.Log($"{chunk.X}, {chunk.Y}, {northChunk.X}, {northChunk.Y} north");
+                    //            AddFrontFace(blockPos, block);
+                    //        }
+                    //    }
+                    //    //else
+                    //    //{
+                    //    //    Debug.Log("oof north");
+                    //    //}
+                    //}
 
                     // If we are not checking out of bounds (Check south)
                     if (z > 0)
@@ -153,25 +153,25 @@ public class MeshBuilder
                         if (IsTransparent(chunk[x, y, z - 1]))
                             AddBackFace(blockPos, block);
                     }
-                    // We were generated north of the player, check south.
-                    else /*if (chunk.GenerationDirection.y > 0 || checkAllChunkBorders)*/
-                    {
-                        Chunk southChunk = worldBuilder.TryGetChunkAt(new Vector2Int(chunk.X, chunk.Y - 1));
+                    //// We were generated north of the player, check south.
+                    //else /*if (chunk.GenerationDirection.y > 0 || checkAllChunkBorders)*/
+                    //{
+                    //    Chunk southChunk = worldBuilder.TryGetChunkAt(chunk.X, chunk.Y - 1);
 
-                        if (southChunk != null)
-                        {
+                    //    if (southChunk != null)
+                    //    {
 
-                            if (IsTransparent(southChunk[x, y, southChunk.Size - 1]))
-                            {
-                                //Debug.Log($"{chunk.X}, {chunk.Y}, {southChunk.X}, {southChunk.Y} south");
-                                AddBackFace(blockPos, block);
-                            }
-                        }
-                        //else
-                        //{
-                        //    Debug.Log("oof south");
-                        //}
-                    }
+                    //        if (IsTransparent(southChunk[x, y, southChunk.Size - 1]))
+                    //        {
+                    //            //Debug.Log($"{chunk.X}, {chunk.Y}, {southChunk.X}, {southChunk.Y} south");
+                    //            AddBackFace(blockPos, block);
+                    //        }
+                    //    }
+                    //    //else
+                    //    //{
+                    //    //    Debug.Log("oof south");
+                    //    //}
+                    //}
                 }
             }
 

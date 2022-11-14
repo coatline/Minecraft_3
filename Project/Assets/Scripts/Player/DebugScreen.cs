@@ -21,9 +21,6 @@ public class DebugScreen : MonoBehaviour
 
     private void Start()
     {
-        player = FindObjectOfType<Player>();
-        cam = Camera.main;
-
         world = game.World;
         worldBuilder = world.WorldBuilder;
         chunkSize = worldBuilder.ChunkSize;
@@ -49,6 +46,13 @@ public class DebugScreen : MonoBehaviour
 
     void Update()
     {
+        if (player == null)
+        {
+            player = FindObjectOfType<Player>();
+            cam = Camera.main;
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.F3))
             debugMenu.SetActive(!debugMenu.activeSelf);
 

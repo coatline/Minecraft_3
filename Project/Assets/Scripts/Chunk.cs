@@ -1,15 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 public class Chunk
 {
     // Static variables
+    public readonly ChunkRenderer ChunkRenderer;
     public readonly WorldBuilder WorldBuilder;
     public readonly int HeightLimit;
     public readonly byte Size;
 
     readonly Vector2 seedDependentOffset;
+    readonly Thread initialValuesThread;
+    readonly Thread initialMeshThread;
     readonly int maxTerrainHeight;
     readonly byte waterLevel;
     readonly byte grass;
@@ -17,11 +21,8 @@ public class Chunk
     readonly byte stone;
     readonly byte bedrock;
 
-    // Holds all necessary data for a given chunk
-
-    public event System.Action<Vector2Int, Chunk> Generated;
-    public event System.Action<Vector2Int> Unloaded;
-    public event System.Action MeshDataReady;
+    public event System.Action<Vector2Int> UpdateChunkBorder;
+    public event System.Action Initialized;
 
     // Chunk coordinates
     public int X { get; private set; }
@@ -30,14 +31,14 @@ public class Chunk
     public float WorldX => X * Size;
     public float WorldY => Y * Size;
 
-    public List<Vector3Int> blocksToBuildFaceOn { get; private set; }
+    public List<Vector3Int> BlocksToBuildFaceOn { get; private set; }
     public Vector2Int GenerationDirection { get; private set; }
 
     byte[,] heightMap;
     byte[,,] blocks;
 
 
-    public Chunk(int chunkX, int chunkY, byte size, World world, WorldBuilder worldBuilder)
+    public Chunk(int chunkX, int chunkY, byte size, World world, WorldBuilder worldBuilder, ChunkRenderer chunkRendererPrefab)
     {
         X = chunkX;
         Y = chunkY;
@@ -52,14 +53,28 @@ public class Chunk
         dirt = DataLibrary.I.Blocks["Dirt"].Id;
         stone = DataLibrary.I.Blocks["Stone"].Id;
         bedrock = DataLibrary.I.Blocks["Bedrock"].Id;
+
+        ChunkRenderer = Object.Instantiate(chunkRendererPrefab, new Vector3(WorldX, 0, WorldY), Quaternion.identity);
+        ChunkRenderer.Setup(this);
+
+        initialValuesThread = new Thread(DoInitialGeneration);
+        initialValuesThread.Name = "Initial Values";
+
+        initialMeshThread = new Thread(ChunkRenderer.GenerateInitialMesh);
+        initialMeshThread.Name = "Initial Mesh";
     }
 
-    /// <summary>
-    /// This is used so that we can generate the values before generating the mesh so that there aren't problems with the chunks depending on each other
-    /// </summary>
-    public void CallGenerated() => Generated?.Invoke(new Vector2Int(X, Y), this);
+    void DoInitialGeneration()
+    {
+        Generate();
+        Initialized.Invoke();
+    }
 
-    public void CallMeshDataReady() => MeshDataReady?.Invoke();
+    public void GenerateInitialValues() => initialValuesThread.Start();
+
+    public void GenerateInitialMesh() => initialMeshThread.Start();
+
+    public void InitialMeshComplete() => Initialized.Invoke();
 
     public void GenerateAt(int chunkX, int chunkY)
     {
@@ -69,7 +84,6 @@ public class Chunk
         Y = chunkY;
 
         Generate();
-        Generated?.Invoke(new Vector2Int(X, Y), this);
     }
 
     void Generate()
@@ -91,7 +105,7 @@ public class Chunk
     void GenerateValues()
     {
         blocks = new byte[Size, HeightLimit, Size];
-        blocksToBuildFaceOn = new List<Vector3Int>();
+        BlocksToBuildFaceOn = new List<Vector3Int>();
 
         for (byte x = 0; x < Size; x++)
         {
@@ -118,7 +132,7 @@ public class Chunk
                     // If it is on the surface of the terrain
                     if (y == height - 1)
                     {
-                        blocksToBuildFaceOn.Add(new Vector3Int(x, y, z));
+                        BlocksToBuildFaceOn.Add(new Vector3Int(x, y, z));
 
                         // If we are under water
                         if (y < waterLevel - 1)
@@ -248,20 +262,10 @@ public class Chunk
     public void Recycle()
     {
         GenerateAt(queuedX, queuedY);
+        ChunkRenderer.GenerateMesh();
     }
 
-    public void Unload()
-    {
-        Unloaded.Invoke(new Vector2Int(X, Y));
-    }
-
-    /// Get block at point
-    public int this[int x, int y, int z]
-    {
-        get => blocks[x, y, z];
-    }
-
-    byte GetHeightAt(int x, int y) => (byte)(OctavePerlin(x, y, 5, .01f, .5f) * maxTerrainHeight);
+    byte GetHeightAt(int x, int y) => (byte)(OctavePerlin(x, y, 5, .0035f, .5f) * maxTerrainHeight);
 
     // Reference:
     // http://adrianb.io/2014/08/09/perlinnoise.html?adlt=strict&toWww=1&redig=5489DC280FC64EBFA66408624C5F6F80
@@ -298,4 +302,10 @@ public class Chunk
     }
 
     public int GetHeightMapAt(int x, int y) => heightMap[x, y] + waterLevel;
+
+    /// Get block at position
+    public int this[int x, int y, int z]
+    {
+        get => blocks[x, y, z];
+    }
 }
