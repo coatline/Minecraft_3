@@ -12,20 +12,15 @@ public class LoadingScreen : MonoBehaviour
     [SerializeField] Game game;
     WorldBuilder worldBuilder;
     bool valuesGenerated;
+    int totalChunks;
     bool finished;
 
     void Start()
     {
         worldBuilder = game.World.WorldBuilder;
-        worldBuilder.InitialValuesGenerated += InitialValuesGenerated;
+
+        totalChunks = worldBuilder.TotalChunks;
         worldBuilder.WorldLoaded += FinishedLoading;
-
-        loadingText.text = "Generating Values...";
-    }
-
-    void InitialValuesGenerated()
-    {
-        loadingText.text = "Building Mesh...";
     }
 
     void FinishedLoading()
@@ -37,6 +32,24 @@ public class LoadingScreen : MonoBehaviour
     void Update()
     {
         if (finished == false)
-            loadingBarFill.fillAmount = (float)(worldBuilder.ChunksLoaded / (float)worldBuilder.TotalChunks);
+        {
+            int loaded = worldBuilder.ChunksLoaded;
+
+            if (loaded < totalChunks)
+            {
+                loadingText.text = "Generating Values...";
+                loadingBarFill.fillAmount = (float)(loaded / (float)worldBuilder.TotalChunks);
+            }
+            else if (loaded < totalChunks * 2)
+            {
+                loadingText.text = "Building Mesh...";
+                loadingBarFill.fillAmount = (float)((loaded - totalChunks) / (float)worldBuilder.TotalChunks);
+            }
+            else
+            {
+                loadingText.text = "Assigning Mesh...";
+                loadingBarFill.fillAmount = (float)((loaded - (totalChunks * 2)) / (float)worldBuilder.TotalChunks);
+            }
+        }
     }
 }

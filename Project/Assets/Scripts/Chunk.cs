@@ -6,23 +6,28 @@ using UnityEngine;
 public class Chunk
 {
     // Static variables
+    System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
     public readonly ChunkRenderer ChunkRenderer;
     public readonly WorldBuilder WorldBuilder;
     public readonly int HeightLimit;
     public readonly byte Size;
 
     readonly Vector2 seedDependentOffset;
-    readonly Thread initialValuesThread;
-    readonly Thread initialMeshThread;
+    //readonly Thread valuesThread;
+    //readonly Thread meshThread;
     readonly int maxTerrainHeight;
     readonly byte waterLevel;
+    readonly byte bedrock;
     readonly byte grass;
     readonly byte dirt;
     readonly byte stone;
-    readonly byte bedrock;
 
     public event System.Action<Vector2Int> UpdateChunkBorder;
-    public event System.Action Initialized;
+    public event System.Action<Chunk> MeshGenerated;
+    public event System.Action<Chunk> MeshAssigned;
+    public event System.Action<Chunk> Generated;
+
+    public bool Generating { get; private set; }
 
     // Chunk coordinates
     public int X { get; private set; }
@@ -31,7 +36,7 @@ public class Chunk
     public float WorldX => X * Size;
     public float WorldY => Y * Size;
 
-    public List<Vector3Int> BlocksToBuildFaceOn { get; private set; }
+    public List<Vector3Int> VisibleBlocks { get; private set; }
     public Vector2Int GenerationDirection { get; private set; }
 
     byte[,] heightMap;
@@ -56,25 +61,11 @@ public class Chunk
 
         ChunkRenderer = Object.Instantiate(chunkRendererPrefab, new Vector3(WorldX, 0, WorldY), Quaternion.identity);
         ChunkRenderer.Setup(this);
-
-        initialValuesThread = new Thread(DoInitialGeneration);
-        initialValuesThread.Name = "Initial Values";
-
-        initialMeshThread = new Thread(ChunkRenderer.GenerateInitialMesh);
-        initialMeshThread.Name = "Initial Mesh";
     }
 
-    void DoInitialGeneration()
-    {
-        Generate();
-        Initialized.Invoke();
-    }
+    public void AssignedMesh() => MeshAssigned?.Invoke(this);
 
-    public void GenerateInitialValues() => initialValuesThread.Start();
-
-    public void GenerateInitialMesh() => initialMeshThread.Start();
-
-    public void InitialMeshComplete() => Initialized.Invoke();
+    public void MeshComplete() => MeshGenerated.Invoke(this);
 
     public void GenerateAt(int chunkX, int chunkY)
     {
@@ -83,14 +74,33 @@ public class Chunk
         X = chunkX;
         Y = chunkY;
 
-        Generate();
+        // Reminder that the thread pool has a maximum of 512 threads per process
+        ThreadPool.QueueUserWorkItem(Generate);
     }
 
-    void Generate()
+    public void GenerateInPlace()
     {
+        ThreadPool.QueueUserWorkItem(Generate);
+    }
+
+    void Generate(object ob)
+    {
+        Generating = true;
+
+        stopwatch.Restart();
+
         GenerateHeightMap();
         GenerateValues();
         GenerateStructures();
+
+        stopwatch.Stop();
+        Debug.Log($"Values: {stopwatch.ElapsedMilliseconds}");
+
+        Generating = false;
+
+        ChunkRenderer.GenerateMesh();
+
+        Generated?.Invoke(this);
     }
 
     void GenerateHeightMap()
@@ -105,7 +115,7 @@ public class Chunk
     void GenerateValues()
     {
         blocks = new byte[Size, HeightLimit, Size];
-        BlocksToBuildFaceOn = new List<Vector3Int>();
+        VisibleBlocks = new List<Vector3Int>();
 
         for (byte x = 0; x < Size; x++)
         {
@@ -132,7 +142,7 @@ public class Chunk
                     // If it is on the surface of the terrain
                     if (y == height - 1)
                     {
-                        BlocksToBuildFaceOn.Add(new Vector3Int(x, y, z));
+                        VisibleBlocks.Add(new Vector3Int(x, y, z));
 
                         // If we are under water
                         if (y < waterLevel - 1)

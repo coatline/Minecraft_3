@@ -1775,7 +1775,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dontDestroyOnLoad: 1
-  renderDistance: 10
+  renderDistance: 5
 --- !u!1 &2017124368
 GameObject:
   m_ObjectHideFlags: 0

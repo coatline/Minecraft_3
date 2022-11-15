@@ -21,21 +21,17 @@ public class ChunkRenderer : MonoBehaviour
         terrainFilter.sharedMesh = terrainMesh;
     }
 
-    public void GenerateInitialMesh()
-    {
-        GenerateMesh();
-        chunk.InitialMeshComplete();
-    }
-
     public void GenerateMesh()
     {
-        meshBuilder.BuildMesh(chunk.BlocksToBuildFaceOn);
+        meshBuilder.UpdateMesh(chunk.VisibleBlocks);
+        chunk.MeshComplete();
     }
 
     public void AssignMesh()
     {
         meshBuilder.AssignMesh(terrainMesh, terrainCollider);
         transform.position = new Vector3(chunk.WorldX, 0, chunk.WorldY);
+        chunk.AssignedMesh();
     }
 
     public void UpdateBorder(Vector2Int border)
