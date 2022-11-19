@@ -15,32 +15,24 @@ public class WorldBuilder
     readonly Dictionary<Vector2Int, Chunk> chunkMap;
     readonly ChunkRenderer chunkRendererPrefab;
     readonly Queue<Chunk> toAssignMesh;
-    readonly Queue<Chunk> recycleQueue;
-    //readonly Thread regenerateThread;
     /// The amount of chunks around the player on a given side
     readonly byte renderDistance;
     readonly Player playerPrefab;
     readonly World world;
     Player player;
-    Game game;
 
 
-    public WorldBuilder(byte renderDistance, byte chunkSize, World world, Player playerPrefab, Game game)
+    public WorldBuilder(byte renderDistance, byte chunkSize, World world, Player playerPrefab)
     {
         TotalChunks = (int)Mathf.Pow(renderDistance * 2 + 1, 2);
         this.renderDistance = renderDistance;
         this.playerPrefab = playerPrefab;
         this.ChunkSize = chunkSize;
         this.world = world;
-        this.game = game;
 
         chunkRendererPrefab = DataLibrary.I.ChunkRendererPrefab;
         chunkMap = new Dictionary<Vector2Int, Chunk>();
-        //regenerateThread = new Thread(GenerateChunks);
         toAssignMesh = new Queue<Chunk>();
-        recycleQueue = new Queue<Chunk>();
-
-        //regenerateThread.Name = "Chunk Generation Thread";
 
         for (int x = -renderDistance; x <= renderDistance; x++)
             for (int y = -renderDistance; y <= renderDistance; y++)
@@ -49,7 +41,7 @@ public class WorldBuilder
         // Do this in a separate loop just in case we finish before we subscribe
         for (int x = -renderDistance; x <= renderDistance; x++)
             for (int y = -renderDistance; y <= renderDistance; y++)
-                TryGetChunkAt(x, y).GenerateInPlace();
+                TryGetChunkAt(x, y).InitializeValues();
 
     }
 
@@ -60,10 +52,8 @@ public class WorldBuilder
             for (int x = -renderDistance; x <= renderDistance; x++)
                 for (int y = -renderDistance; y <= renderDistance; y++)
                 {
-                    ChunksLoaded++;
                     Chunk chunk = TryGetChunkAt(x, y);
 
-                    chunk.Generated -= ChunkInitialized;
                     chunk.MeshAssigned -= ChunkInitialized;
                     chunk.MeshGenerated -= ChunkInitialized;
                 }
@@ -77,62 +67,11 @@ public class WorldBuilder
             WorldLoaded?.Invoke();
             ChunksLoaded = 0;
         }
+        else
+            while (toAssignMesh.Count > 0)
+                lock (toAssignMesh)
+                    toAssignMesh.Dequeue().ChunkRenderer.AssignMesh();
     }
-
-    //void InitializeChunks()
-    //{
-    //    if (ChunksLoaded == TotalChunks)
-    //    {
-    //        ChunksLoaded = 0;
-
-    //        // All values have been generated, generate the meshes
-    //        if (initialValuesGenerated == false)
-    //        {
-    //            initialValuesGenerated = true;
-
-    //            for (int x = -renderDistance; x <= renderDistance; x++)
-    //                for (int y = -renderDistance; y <= renderDistance; y++)
-    //                {
-    //                    Chunk chunk = TryGetChunkAt(x, y);
-    //                    // Generate the mesh
-    //                }
-
-    //            // Signal the loading screen
-    //            InitialValuesGenerated?.Invoke();
-    //        }
-    //        // All meshes have been generated, assign the meshes
-    //        else if (finishingLoading == false)
-    //            // Do it incremently
-    //            game.StartCoroutine(AssignMeshes());
-    //    }
-    //}
-
-    //IEnumerator AssignMeshes()
-    //{
-    //    ChunksLoaded = 0;
-
-    //    for (int x = -renderDistance; x <= renderDistance; x++)
-    //    {
-    //        for (int y = -renderDistance; y <= renderDistance; y++)
-    //        {
-    //            ChunksLoaded++;
-    //            Chunk chunk = TryGetChunkAt(x, y);
-    //            // Assign the mesh in the main thread
-    //            chunk.ChunkRenderer.AssignMesh();
-
-    //            chunk.Generated -= ChunkInitialized;
-    //            chunk.MeshGenerated -= ChunkInitialized;
-    //        }
-
-    //        yield return new WaitForEndOfFrame();
-    //    }
-
-
-    //    regenerateThread.Start();
-
-    //    // Signal the loading screen
-    //    WorldLoaded?.Invoke();
-    //}
 
     void CreateChunkAt(int x, int y)
     {
@@ -146,7 +85,7 @@ public class WorldBuilder
         // For loading screen
         newChunk.MeshGenerated += ChunkInitialized;
         newChunk.MeshAssigned += ChunkInitialized;
-        newChunk.Generated += ChunkInitialized;
+        newChunk.ValuesGenerated += ChunkValuesInitialized;
     }
 
     void ChunkInitialized(Chunk chunk)
@@ -155,9 +94,27 @@ public class WorldBuilder
         lock (this) ChunksLoaded++;
     }
 
+    void ChunkValuesInitialized(Chunk c)
+    {
+        ChunkInitialized(c);
+
+        // All values have been generated, now we can initialize the meshes
+        if (ChunksLoaded == TotalChunks)
+        {
+            for (int x = -renderDistance; x <= renderDistance; x++)
+                for (int y = -renderDistance; y <= renderDistance; y++)
+                {
+                    Chunk chunk = TryGetChunkAt(x, y);
+
+                    chunk.InitializeMesh();
+                    chunk.ValuesGenerated -= ChunkValuesInitialized;
+                }
+        }
+    }
+
     void ChunkMeshGenerated(Chunk chunk)
     {
-        lock (this) toAssignMesh.Enqueue(chunk);
+        lock (toAssignMesh) toAssignMesh.Enqueue(chunk);
     }
 
     Vector2Int prevPlayerChunkCoords;
@@ -190,17 +147,11 @@ public class WorldBuilder
                 Chunk chunk = chunkMap[new Vector2Int(x, nyCoord - 1)];
 
                 Vector2Int newChunkCoords = new Vector2Int(x, pyCoord);
-                chunk.MarkAsRecycled(newChunkCoords);
 
                 chunkMap.Remove(new Vector2Int(x, nyCoord - 1));
                 chunkMap.Add(newChunkCoords, chunk);
 
                 chunk.GenerateAt(newChunkCoords.x, newChunkCoords.y);
-
-                //if (!recycleQueue.Contains(chunk))
-                //    recycleQueue.Enqueue(chunk);
-                //else
-                //    Debug.LogError("huh");
             }
         // Went South
         else if (prevPlayerChunkCoords.y > chunkPosition.y)
@@ -209,17 +160,11 @@ public class WorldBuilder
                 Chunk chunk = chunkMap[new Vector2Int(x, pyCoord + 1)];
 
                 Vector2Int newChunkCoords = new Vector2Int(x, nyCoord);
-                chunk.MarkAsRecycled(newChunkCoords);
 
                 chunkMap.Remove(new Vector2Int(x, pyCoord + 1));
                 chunkMap.Add(newChunkCoords, chunk);
 
                 chunk.GenerateAt(newChunkCoords.x, newChunkCoords.y);
-
-                //if (!recycleQueue.Contains(chunk))
-                //    recycleQueue.Enqueue(chunk);
-                //else
-                //    Debug.LogError("huh");
             }
         // Went West
         if (prevPlayerChunkCoords.x > chunkPosition.x)
@@ -228,16 +173,11 @@ public class WorldBuilder
                 Chunk chunk = chunkMap[new Vector2Int(pxCoord + 1, y)];
 
                 Vector2Int newChunkCoords = new Vector2Int(nxCoord, y);
-                chunk.MarkAsRecycled(newChunkCoords);
 
                 chunkMap.Remove(new Vector2Int(pxCoord + 1, y));
                 chunkMap.Add(newChunkCoords, chunk);
 
                 chunk.GenerateAt(newChunkCoords.x, newChunkCoords.y);
-                //if (!recycleQueue.Contains(chunk))
-                //recycleQueue.Enqueue(chunk);
-                //else
-                //Debug.LogError("huh");
             }
         // Went East
         else if (prevPlayerChunkCoords.x < chunkPosition.x)
@@ -246,44 +186,34 @@ public class WorldBuilder
                 Chunk chunk = chunkMap[new Vector2Int(nxCoord - 1, y)];
 
                 Vector2Int newChunkCoords = new Vector2Int(pxCoord, y);
-                chunk.MarkAsRecycled(newChunkCoords);
 
                 chunkMap.Remove(new Vector2Int(nxCoord - 1, y));
                 chunkMap.Add(newChunkCoords, chunk);
 
                 chunk.GenerateAt(newChunkCoords.x, newChunkCoords.y);
-                //if (!recycleQueue.Contains(chunk))
-                //recycleQueue.Enqueue(chunk);
-                //else
-                //Debug.LogError("huh");
             }
 
         prevPlayerChunkCoords = chunkPosition;
     }
 
-    //void GenerateChunks()
-    //{
-    //    while (true)
-    //    {
-    //        if (recycleQueue.Count == 0)
-    //            continue;
-
-    //        Chunk c = recycleQueue.Dequeue();
-    //        //c.Unload();
-    //        c.Recycle();
-
-    //        toAssignMesh.Enqueue(c);
-    //    }
-    //}
-
     public void Update(float deltaTime)
     {
         if (worldLoaded == false)
+        {
             LoadingScreen();
+            return;
+        }
 
-        // Probably do more than one at a time
-        while (toAssignMesh.Count > 0)
-            toAssignMesh.Dequeue().ChunkRenderer.AssignMesh();
+        int maxAmount = Mathf.CeilToInt(toAssignMesh.Count / 4f);
+        byte amount = 0;
+
+        // Assign the meshes in the main thread.
+        while (amount < maxAmount)
+        {
+            lock (toAssignMesh)
+                toAssignMesh.Dequeue().ChunkRenderer.AssignMesh();
+            amount++;
+        }
 
         if (player != null)
             PlayerMoved(GlobalToChunkCoords(player.transform.position));

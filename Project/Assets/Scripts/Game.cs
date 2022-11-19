@@ -14,12 +14,12 @@ public class Game : MonoBehaviour
 
     void Awake()
     {
-        World = new World(maxTerrainHeight, 255, 40, seed, playerPrefab, this);
+        World = new World(maxTerrainHeight, 255, 40, seed, playerPrefab);
 
         if (World.StringSeed == "")
-            seedNumber.text = World.Seed.ToString();
+            seedNumber.text += World.Seed.ToString();
         else
-            seedNumber.text = World.StringSeed;
+            seedNumber.text += World.StringSeed;
     }
 
     private void Update()

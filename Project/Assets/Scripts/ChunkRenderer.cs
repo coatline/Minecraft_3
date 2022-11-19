@@ -11,6 +11,14 @@ public class ChunkRenderer : MonoBehaviour
     Mesh terrainMesh;
     Chunk chunk;
 
+    public bool Generating { get; private set; }
+
+    private void Awake()
+    {
+        // Makes startup much slower
+        //transform.SetParent(FindObjectOfType<Game>().transform);
+    }
+
     public void Setup(Chunk chunk)
     {
         this.chunk = chunk;
@@ -23,8 +31,12 @@ public class ChunkRenderer : MonoBehaviour
 
     public void GenerateMesh()
     {
+        Generating = true;
+
         meshBuilder.UpdateMesh(chunk.VisibleBlocks);
         chunk.MeshComplete();
+
+        Generating = false;
     }
 
     public void AssignMesh()

@@ -9,6 +9,7 @@ public class LoadingScreen : MonoBehaviour
     [SerializeField] GameObject loadingScreen;
     [SerializeField] Image loadingBarFill;
     [SerializeField] TMP_Text loadingText;
+    [SerializeField] TMP_Text loadedRatio;
     [SerializeField] Game game;
     WorldBuilder worldBuilder;
     bool valuesGenerated;
@@ -34,6 +35,8 @@ public class LoadingScreen : MonoBehaviour
         if (finished == false)
         {
             int loaded = worldBuilder.ChunksLoaded;
+
+            loadedRatio.text = $"{loaded} / {worldBuilder.TotalChunks}";
 
             if (loaded < totalChunks)
             {

@@ -25,7 +25,7 @@ public class Chunk
     public event System.Action<Vector2Int> UpdateChunkBorder;
     public event System.Action<Chunk> MeshGenerated;
     public event System.Action<Chunk> MeshAssigned;
-    public event System.Action<Chunk> Generated;
+    public event System.Action<Chunk> ValuesGenerated;
 
     public bool Generating { get; private set; }
 
@@ -36,8 +36,9 @@ public class Chunk
     public float WorldX => X * Size;
     public float WorldY => Y * Size;
 
+    // Does not count chunk borders
     public List<Vector3Int> VisibleBlocks { get; private set; }
-    public Vector2Int GenerationDirection { get; private set; }
+    public List<Vector3Int> BorderAirBlocks { get; private set; }
 
     byte[,] heightMap;
     byte[,,] blocks;
@@ -69,8 +70,6 @@ public class Chunk
 
     public void GenerateAt(int chunkX, int chunkY)
     {
-        GenerationDirection = new Vector2Int(chunkX - X, chunkY - Y);
-
         X = chunkX;
         Y = chunkY;
 
@@ -83,24 +82,44 @@ public class Chunk
         ThreadPool.QueueUserWorkItem(Generate);
     }
 
+    public void InitializeValues() => ThreadPool.QueueUserWorkItem(GenerateInitial);
+    public void InitializeMesh() => ThreadPool.QueueUserWorkItem(GenerateInitialMesh);
+
+    void GenerateInitialMesh(object ob) => ChunkRenderer.GenerateMesh();
+
+    void GenerateInitial(object ob)
+    {
+        Generating = true;
+
+        GenerateAll();
+
+        Generating = false;
+        ValuesGenerated?.Invoke(this);
+    }
+
     void Generate(object ob)
     {
         Generating = true;
 
-        stopwatch.Restart();
+        //stopwatch.Restart();
 
-        GenerateHeightMap();
-        GenerateValues();
-        GenerateStructures();
+        GenerateAll();
 
-        stopwatch.Stop();
-        Debug.Log($"Values: {stopwatch.ElapsedMilliseconds}");
+        //stopwatch.Stop();
+        //Debug.Log($"Values: {stopwatch.ElapsedMilliseconds}");
 
         Generating = false;
 
         ChunkRenderer.GenerateMesh();
 
-        Generated?.Invoke(this);
+        ValuesGenerated?.Invoke(this);
+    }
+
+    void GenerateAll()
+    {
+        GenerateHeightMap();
+        GenerateValues();
+        GenerateStructures();
     }
 
     void GenerateHeightMap()
@@ -121,7 +140,7 @@ public class Chunk
         {
             for (byte z = 0; z < Size; z++)
             {
-                int height = heightMap[x, z] + waterLevel;
+                int height = heightMap[x, z];
 
                 // DEBUG
                 if (height >= HeightLimit)
@@ -145,7 +164,7 @@ public class Chunk
                         VisibleBlocks.Add(new Vector3Int(x, y, z));
 
                         // If we are under water
-                        if (y < waterLevel - 1)
+                        if (y <= waterLevel)
                             blocks[x, y, z] = dirt;
                         else
                             blocks[x, y, z] = grass;
@@ -260,21 +279,6 @@ public class Chunk
 
     }
 
-    int queuedX;
-    int queuedY;
-
-    public void MarkAsRecycled(Vector2Int chunkCoords)
-    {
-        queuedX = chunkCoords.x;
-        queuedY = chunkCoords.y;
-    }
-
-    public void Recycle()
-    {
-        GenerateAt(queuedX, queuedY);
-        ChunkRenderer.GenerateMesh();
-    }
-
     byte GetHeightAt(int x, int y) => (byte)(OctavePerlin(x, y, 5, .0035f, .5f) * maxTerrainHeight);
 
     // Reference:
@@ -311,7 +315,7 @@ public class Chunk
         return Mathf.Clamp01(noiseValue);
     }
 
-    public int GetHeightMapAt(int x, int y) => heightMap[x, y] + waterLevel;
+    public int GetHeightMapAt(int x, int y) => heightMap[x, y];
 
     /// Get block at position
     public int this[int x, int y, int z]

@@ -41,9 +41,10 @@ public class Block : ScriptableObject
         };
     }
 
-    public Vector2[] GetTopTextureOnTextureAtlas() => GetTextureOnTextureAtlas(topTexture.TextureX, topTexture.TextureY);
-    public Vector2[] GetSideTextureOnTextureAtlas() => GetTextureOnTextureAtlas(sideTexture.TextureX, sideTexture.TextureY);
-    public Vector2[] GetBottomTextureOnTextureAtlas() => GetTextureOnTextureAtlas(bottomTexture.TextureX, bottomTexture.TextureY);
+    // Hardcode this
+    public Vector2[] GetTopTextureUvs() => GetTextureOnTextureAtlas(topTexture.TextureX, topTexture.TextureY);
+    public Vector2[] GetSideTextureUvs() => GetTextureOnTextureAtlas(sideTexture.TextureX, sideTexture.TextureY);
+    public Vector2[] GetBottomTextureUvs() => GetTextureOnTextureAtlas(bottomTexture.TextureX, bottomTexture.TextureY);
 
     //public Color particleColor;
     //public bool transparent;
