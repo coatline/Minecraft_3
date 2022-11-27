@@ -22,10 +22,10 @@ public class Chunk
     readonly byte dirt;
     readonly byte stone;
 
-    public event System.Action<Vector2Int> UpdateChunkBorder;
+    public event System.Action<Chunk> StartedGenerating;
+    public event System.Action<Chunk> ValuesGenerated;
     public event System.Action<Chunk> MeshGenerated;
     public event System.Action<Chunk> MeshAssigned;
-    public event System.Action<Chunk> ValuesGenerated;
 
     public bool Generating { get; private set; }
 
@@ -39,6 +39,12 @@ public class Chunk
     // Does not count chunk borders
     public List<Vector3Int> VisibleBlocks { get; private set; }
     public List<Vector3Int> BorderAirBlocks { get; private set; }
+
+    // We only need a Vector2 since we can assume certain axis given the border (ex: southBorder always has z == 0)
+    public List<Vector2Int> NorthBorderBlocks { get; private set; }
+    public List<Vector2Int> SouthBorderBlocks { get; private set; }
+    public List<Vector2Int> EastBorderBlocks { get; private set; }
+    public List<Vector2Int> WestBorderBlocks { get; private set; }
 
     byte[,] heightMap;
     byte[,,] blocks;
@@ -62,24 +68,53 @@ public class Chunk
 
         ChunkRenderer = Object.Instantiate(chunkRendererPrefab, new Vector3(WorldX, 0, WorldY), Quaternion.identity);
         ChunkRenderer.Setup(this);
+
+        generateThread = new Thread(Generate);
     }
 
     public void AssignedMesh() => MeshAssigned?.Invoke(this);
 
-    public void MeshComplete() => MeshGenerated.Invoke(this);
-
-    public void GenerateAt(int chunkX, int chunkY)
+    public void MeshComplete()
     {
+        MeshGenerated.Invoke(this);
+
+        if (queued)
+        {
+            GenerateAt(queuedX, queuedY, true);
+        }
+
+    }
+
+    Thread generateThread;
+    bool queued;
+    int queuedX;
+    int queuedY;
+
+    public void GenerateAt(int chunkX, int chunkY, bool initiatingQueued = false)
+    {
+        if (Generating || ChunkRenderer.Generating || queued)
+        {
+            queued = true;
+            queuedX = chunkX;
+            queuedY = chunkY;
+            return;
+        }
+
         X = chunkX;
         Y = chunkY;
 
-        // Reminder that the thread pool has a maximum of 512 threads per process
-        ThreadPool.QueueUserWorkItem(Generate);
-    }
+        if (initiatingQueued == false)
+        {
 
-    public void GenerateInPlace()
-    {
-        ThreadPool.QueueUserWorkItem(Generate);
+            generateThread.Abort();
+
+
+            generateThread = new Thread(Generate);
+            generateThread.Start();
+        }
+
+        // Reminder that the thread pool has a maximum of 512 threads per process
+        //ThreadPool.QueueUserWorkItem(Generate);
     }
 
     public void InitializeValues() => ThreadPool.QueueUserWorkItem(GenerateInitial);
@@ -94,11 +129,14 @@ public class Chunk
         GenerateAll();
 
         Generating = false;
+
         ValuesGenerated?.Invoke(this);
     }
 
     void Generate(object ob)
     {
+        StartedGenerating?.Invoke(this);
+
         Generating = true;
 
         //stopwatch.Restart();
@@ -110,16 +148,45 @@ public class Chunk
 
         Generating = false;
 
+        FinishGenerating();
+
         ChunkRenderer.GenerateMesh();
 
         ValuesGenerated?.Invoke(this);
     }
 
+    void FinishGenerating()
+    {
+        //Chunk northChunk = WorldBuilder.TryGetChunkAt(X, Y + 1);
+        //Chunk southChunk = WorldBuilder.TryGetChunkAt(X, Y - 1);
+        //Chunk eastChunk = WorldBuilder.TryGetChunkAt(X + 1, Y);
+        //Chunk westChunk = WorldBuilder.TryGetChunkAt(X - 1, Y);
+
+        //if (northChunk != null)
+        //    northChunk.ChunkRenderer.UpdateBorderSouth(this);
+
+        //if (southChunk != null)
+        //    southChunk.ChunkRenderer.UpdateBorderNorth(this);
+
+        //if (eastChunk != null)
+        //    eastChunk.ChunkRenderer.UpdateBorderWest(this);
+
+        //if (westChunk != null)
+        //    westChunk.ChunkRenderer.UpdateBorderEast(this);
+    }
+
     void GenerateAll()
     {
-        GenerateHeightMap();
-        GenerateValues();
-        GenerateStructures();
+        try
+        {
+            GenerateHeightMap();
+            GenerateValues();
+            GenerateStructures();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError(e.Message);
+        }
     }
 
     void GenerateHeightMap()
@@ -134,7 +201,13 @@ public class Chunk
     void GenerateValues()
     {
         blocks = new byte[Size, HeightLimit, Size];
-        VisibleBlocks = new List<Vector3Int>();
+
+        VisibleBlocks = new();
+        BorderAirBlocks = new();
+        SouthBorderBlocks = new();
+        NorthBorderBlocks = new();
+        EastBorderBlocks = new();
+        WestBorderBlocks = new();
 
         for (byte x = 0; x < Size; x++)
         {
@@ -176,6 +249,13 @@ public class Chunk
 
                         blocks[x, y, z] = dirt;
                     }
+
+                    if (z == 0)
+                        SouthBorderBlocks.Add(new Vector2Int(x, y));
+                    else if (z == Size - 1)
+                        NorthBorderBlocks.Add(new Vector2Int(x, y));
+
+
                     //else
                     //    blocks[x, y, z] = stone;
 

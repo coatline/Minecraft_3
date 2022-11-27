@@ -35,8 +35,7 @@ public class LoadingScreen : MonoBehaviour
         if (finished == false)
         {
             int loaded = worldBuilder.ChunksLoaded;
-
-            loadedRatio.text = $"{loaded} / {worldBuilder.TotalChunks}";
+            int minusTotal = 0;
 
             if (loaded < totalChunks)
             {
@@ -47,12 +46,16 @@ public class LoadingScreen : MonoBehaviour
             {
                 loadingText.text = "Building Mesh...";
                 loadingBarFill.fillAmount = (float)((loaded - totalChunks) / (float)worldBuilder.TotalChunks);
+                minusTotal = totalChunks;
             }
             else
             {
                 loadingText.text = "Assigning Mesh...";
                 loadingBarFill.fillAmount = (float)((loaded - (totalChunks * 2)) / (float)worldBuilder.TotalChunks);
+                minusTotal = totalChunks * 2;
             }
+
+            loadedRatio.text = $"{loaded - minusTotal} / {worldBuilder.TotalChunks}";
         }
     }
 }

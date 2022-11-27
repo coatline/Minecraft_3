@@ -31,15 +31,40 @@ public class MeshBuilder
     {
         //stopwatch.Restart();
 
-        generating = true;
+        try
+        {
+            //if (generating)
+            //    Thread.Sleep(1);
 
-        BuildMesh(visibleBlocks);
+            // Generating borders. Wait.
+            while (generatingBorder)
+            {
+                Debug.Log("Generatnig border.. Waiting...");
+                Thread.Sleep(1);
+            }
 
-        generating = false;
+
+            generating = true;
+
+            BuildMesh(visibleBlocks);
+
+            generating = false;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+        }
 
         //stopwatch.Stop();
         //Debug.Log($"Meshbuilding: {stopwatch.ElapsedMilliseconds}");
     }
+
+    Chunk queueSouthBorder;
+    bool generatingBorder;
+    public Chunk NorthChunk { get; set; }
+    public Chunk SouthChunk { get; set; }
+    public Chunk WestChunk { get; set; }
+    public Chunk EastChunk { get; set; }
 
     public void BuildMesh(List<Vector3Int> visibleBlocks)
     {
@@ -50,16 +75,64 @@ public class MeshBuilder
         //blocksToRecheck.Clear();
 
         // Do this so we don't have to check for them every time. If they are null, don't do border checks; wait for them to generate where they will call updateborders on this
-        Chunk northChunk = worldBuilder.TryGetChunkAt(chunk.X, chunk.Y + 1);
-        Chunk southChunk = worldBuilder.TryGetChunkAt(chunk.X, chunk.Y - 1);
-        Chunk westChunk = worldBuilder.TryGetChunkAt(chunk.X - 1, chunk.Y);
-        Chunk eastChunk = worldBuilder.TryGetChunkAt(chunk.X + 1, chunk.Y);
+        NorthChunk = worldBuilder.TryGetChunkAt(chunk.X, chunk.Y + 1);
+        SouthChunk = worldBuilder.TryGetChunkAt(chunk.X, chunk.Y - 1);
+        WestChunk = worldBuilder.TryGetChunkAt(chunk.X - 1, chunk.Y);
+        EastChunk = worldBuilder.TryGetChunkAt(chunk.X + 1, chunk.Y);
+
+        if (SouthChunk == null)
+            Debug.Log("Gulp... This had better be right!");
+
+        //if (NorthChunk != null)
+        //    while (NorthChunk.Generating)
+        //    {
+        //        Debug.Log("Waiting...");
+        //        Thread.Sleep(1);
+        //    }
+
+        //if (SouthChunk != null)
+        //    while (SouthChunk.Generating)
+        //    {
+        //        Debug.Log("Waiting...");
+        //        Thread.Sleep(1);
+        //    }
+
+        //if (WestChunk != null)
+        //    while (WestChunk.Generating)
+        //    {
+        //        Debug.Log("Waiting...");
+        //        Thread.Sleep(1);
+        //    }
+
+        //if (EastChunk != null)
+        //    while (EastChunk.Generating)
+        //    {
+        //        Debug.Log("Waiting...");
+        //        Thread.Sleep(1);
+        //    }
+
+        if (NorthChunk != null)
+            if (NorthChunk.Generating)
+                NorthChunk = null;
+
+        if (SouthChunk != null)
+            if (SouthChunk.Generating)
+                SouthChunk = null;
+
+        if (WestChunk != null)
+            if (WestChunk.Generating)
+                WestChunk = null;
+
+        if (EastChunk != null)
+            if (EastChunk.Generating)
+                EastChunk = null;
 
         for (int i = 0; i < visibleBlocks.Count; i++)
         {
-            int x = visibleBlocks[i].x;
-            int y = visibleBlocks[i].y;
-            int z = visibleBlocks[i].z;
+            Vector3Int blockPos = visibleBlocks[i];
+            int x = blockPos.x;
+            int y = blockPos.y;
+            int z = blockPos.z;
 
             int blockId = chunk[x, y, z];
 
@@ -68,8 +141,6 @@ public class MeshBuilder
                 continue;
 
             Block block = BlockLoader.I.GetBlock(blockId);
-
-            Vector3Int blockPos = new Vector3Int(x, y, z);
 
             #region TopAndBottom
 
@@ -94,21 +165,21 @@ public class MeshBuilder
                     AddFace(blockPos, Extensions.leftFaces, block.GetSideTextureUvs());
             }
             // We were generated east of the player, check west.
-            //else
-            //{
+            else
+            {
+                if (WestChunk != null)
+                {
+                    //while (westChunk.Generating)
+                    //Thread.Sleep(1);
 
-            //    if (westChunk != null)
-            //    {
-            //        //while (westChunk.Generating)
-            //            //Thread.Sleep(1);
-            //        if (IsTransparent(westChunk[westChunk.Size - 1, y, z]))
-            //            AddFace(blockPos, Extensions.leftFaces, block.GetSideTextureUvs());
-            //    }
-            //    else
-            //    {
-            //        Debug.Log("Oh NOOOOOOOOOOOOOOOOOOOOOOOOOOOOO!");
-            //    }
-            //}
+                    if (IsTransparent(WestChunk[WestChunk.Size - 1, y, z]))
+                        AddFace(blockPos, Extensions.leftFaces, block.GetSideTextureUvs());
+                }
+                else
+                {
+
+                }
+            }
 
             // If we are not checking out of bounds (Checking east)
             if (x < chunk.Size - 1)
@@ -117,22 +188,21 @@ public class MeshBuilder
                     AddFace(blockPos, Extensions.rightFaces, block.GetSideTextureUvs());
             }
             // We were generated west of the player, check east.
-            //else
-            //{
+            else
+            {
+                if (EastChunk != null)
+                {
+                    //while (eastChunk.Generating)
+                    //Thread.Sleep(1);
 
-            //    if (eastChunk != null)
-            //    {
-            //        //while (eastChunk.Generating)
-            //            //Thread.Sleep(1);
+                    if (IsTransparent(EastChunk[0, y, z]))
+                        AddFace(blockPos, Extensions.rightFaces, block.GetSideTextureUvs());
+                }
+                else
+                {
 
-            //        if (IsTransparent(eastChunk[0, y, z]))
-            //            AddFace(blockPos, Extensions.rightFaces, block.GetSideTextureUvs());
-            //    }
-            //    else
-            //    {
-            //        Debug.Log("Oh NOOOOOOOOOOOOOOOOOOOOOOOOOOOOO!");
-            //    }
-            //}
+                }
+            }
 
             // If we are not checking out of bounds (Check north)
             if (z < chunk.Size - 1)
@@ -141,22 +211,21 @@ public class MeshBuilder
                     AddFace(blockPos, Extensions.frontFaces, block.GetSideTextureUvs());
             }
             // We were generated south of the player, check north.
-            //else
-            //{
+            else
+            {
+                if (NorthChunk != null)
+                {
+                    //while (northChunk.Generating)
+                    //Thread.Sleep(1);
 
-            //    if (northChunk != null)
-            //    {
-            //        //while (northChunk.Generating)
-            //            //Thread.Sleep(1);
+                    if (IsTransparent(NorthChunk[x, y, 0]))
+                        AddFace(blockPos, Extensions.frontFaces, block.GetSideTextureUvs());
+                }
+                else
+                {
 
-            //        if (IsTransparent(northChunk[x, y, 0]))
-            //            AddFace(blockPos, Extensions.frontFaces, block.GetSideTextureUvs());
-            //    }
-            //    else
-            //    {
-            //        Debug.Log("Oh NOOOOOOOOOOOOOOOOOOOOOOOOOOOOO!");
-            //    }
-            //}
+                }
+            }
 
             // If we are not checking out of bounds (Check south)
             if (z > 0)
@@ -165,35 +234,149 @@ public class MeshBuilder
                     AddFace(blockPos, Extensions.backFaces, block.GetSideTextureUvs());
             }
             // We were generated north of the player, check south.
-            //else
-            //{
+            else
+            {
+                if (SouthChunk != null)
+                {
+                    //while (southChunk.Generating)
+                    //Thread.Sleep(1);
 
-            //    if (southChunk != null)
-            //    {
-            //        //while (southChunk.Generating)
-            //            //Thread.Sleep(1);
+                    if (IsTransparent(SouthChunk[x, y, SouthChunk.Size - 1]))
+                        AddFace(blockPos, Extensions.backFaces, block.GetSideTextureUvs());
+                }
+                else
+                {
 
-            //        if (IsTransparent(southChunk[x, y, southChunk.Size - 1]))
-            //            AddFace(blockPos, Extensions.backFaces, block.GetSideTextureUvs());
-            //    }
-            //    else
-            //    {
-            //        Debug.Log("Oh NOOOOOOOOOOOOOOOOOOOOOOOOOOOOO!");
-            //    }
-            //}
+                }
+            }
         }
 
         #endregion
 
-        void AddFace(Vector3Int pos, Vector3[] vertices, Vector2[] textureUvs)
+        if (NorthChunk != null)
         {
-            for (int k = 0; k < 4; k++)
-                verts.Add(pos + vertices[k]);
+            MeshBuilder mb = NorthChunk.ChunkRenderer.MeshBuilder;
 
-            triangles.AddRange(Extensions.GetTriangles(verts.Count));
-
-            uvs.AddRange(textureUvs);
+            if (mb.SouthChunk == null)
+            {
+                // Tell the north chunk to update their southern border so the updates attach to their mesh
+                //Debug.Log("I am telling other chunk to update southern...");
+                //mb.UpdateSouthChunkBorder(chunk);
+            }
         }
+
+        if (SouthChunk != null)
+            if (SouthChunk.ChunkRenderer.MeshBuilder.NorthChunk == null)
+            {
+
+            }
+
+        // Update borders that we have queued up
+
+        if (queueSouthBorder != null)
+        {
+            //Debug.Log("It was queued...");
+            //UpdateSouthChunkBorder(queueSouthBorder, false);
+        }
+    }
+
+    public void UpdateSouthChunkBorder(Chunk southChunk, bool callAssignMesh = true)
+    {
+        queueSouthBorder = null;
+
+        // We are generating our new mesh...
+        if (generating)
+            if (SouthChunk == null)
+            {
+                // Queue it
+                queueSouthBorder = southChunk;
+                return;
+            }
+            else
+                // We will be generating those borders. No need to worry.
+                return;
+
+        generatingBorder = true;
+
+        SouthChunk = southChunk;
+
+        for (int i = 0; i < chunk.SouthBorderBlocks.Count; i++)
+        {
+            Vector2Int blockPos = chunk.SouthBorderBlocks[i];
+
+            int blockId = chunk[blockPos.x, blockPos.y, 0];
+            Block block = BlockLoader.I.GetBlock(blockId);
+
+            // If there is no block there, generate a face
+            if (SouthChunk.NorthBorderBlocks.Contains(blockPos) == false)
+                AddFace(new Vector3Int(blockPos.x, blockPos.y, 0), Extensions.backFaces, block.GetTopTextureUvs());
+        }
+
+        #region OldMethod
+        //for (int x = 0; x < chunk.Size; x++)
+        //{
+        //    for (int y = 0; y < chunk.HeightLimit; y++)
+        //    {
+        //        int blockId = chunk[x, y, 0];
+
+        //        // If the block is air or water, continue
+        //        if (blockId == 0 || blockId == 12)
+        //            continue;
+
+        //        Block block = BlockLoader.I.GetBlock(blockId);
+
+        //        if (IsTransparent(southChunk[x, y, southChunk.Size - 1]))
+        //            AddFace(new Vector3Int(x, y, 0), Extensions.backFaces, block.GetSideTextureUvs());
+        //    }
+        //}
+        #endregion
+
+        if (callAssignMesh)
+            chunk.MeshComplete();
+
+        generatingBorder = false;
+    }
+
+    public void UpdateNorthChunkBorder(Chunk northChunk)
+    {
+        for (int x = 0; x < chunk.Size; x++)
+        {
+            for (int y = 0; y < chunk.HeightLimit; y++)
+            {
+                int blockId = chunk[x, y, chunk.Size - 1];
+
+                // If the block is air or water, continue
+                if (blockId == 0 || blockId == 12)
+                    continue;
+
+                Block block = BlockLoader.I.GetBlock(blockId);
+
+                if (IsTransparent(northChunk[x, y, 0]))
+                    AddFace(new Vector3Int(x, y, chunk.Size - 1), Extensions.frontFaces, block.GetSideTextureUvs());
+            }
+        }
+
+        chunk.MeshComplete();
+    }
+
+    public void UpdateEastChunkBorder(Chunk eastChunk)
+    {
+
+    }
+
+    public void UpdateWestChunkBorder(Chunk westChunk)
+    {
+
+    }
+
+    void AddFace(Vector3Int pos, Vector3[] vertices, Vector2[] textureUvs)
+    {
+        for (int k = 0; k < 4; k++)
+            verts.Add(pos + vertices[k]);
+
+        triangles.AddRange(Extensions.GetTriangles(verts.Count));
+
+        uvs.AddRange(textureUvs);
     }
 
     /// Returns true if it is air or transparent.
@@ -204,14 +387,19 @@ public class MeshBuilder
 
     public void AssignMesh(Mesh terrainMesh, MeshCollider meshCollider)
     {
-        if (generating) { Debug.Log("Ya"); return; }
+        if (generating) { Debug.LogWarning("Started generating new chunk before I could even assign the new mesh!"); return; }
+        if (verts.Count != uvs.Count)
+        {
+            Debug.LogWarning("WRong!!!!");
+            return;
+        }
 
         terrainMesh.Clear();
         terrainMesh.SetVertices(verts);
         terrainMesh.SetTriangles(triangles, 0);
         terrainMesh.SetUVs(0, uvs);
 
-        meshCollider.sharedMesh = terrainMesh;
+        //meshCollider.sharedMesh = terrainMesh;
     }
 
     #region WaterMesh

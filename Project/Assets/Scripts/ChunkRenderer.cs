@@ -7,7 +7,7 @@ public class ChunkRenderer : MonoBehaviour
     [SerializeField] MeshRenderer terrainRenderer;
     [SerializeField] MeshCollider terrainCollider;
     [SerializeField] MeshFilter terrainFilter;
-    MeshBuilder meshBuilder;
+    public MeshBuilder MeshBuilder { get; private set; }
     Mesh terrainMesh;
     Chunk chunk;
 
@@ -24,7 +24,7 @@ public class ChunkRenderer : MonoBehaviour
         this.chunk = chunk;
 
         terrainMesh = new Mesh();
-        meshBuilder = new MeshBuilder(chunk);
+        MeshBuilder = new MeshBuilder(chunk);
 
         terrainFilter.sharedMesh = terrainMesh;
     }
@@ -33,7 +33,7 @@ public class ChunkRenderer : MonoBehaviour
     {
         Generating = true;
 
-        meshBuilder.UpdateMesh(chunk.VisibleBlocks);
+        MeshBuilder.UpdateMesh(chunk.VisibleBlocks);
         chunk.MeshComplete();
 
         Generating = false;
@@ -41,13 +41,14 @@ public class ChunkRenderer : MonoBehaviour
 
     public void AssignMesh()
     {
-        meshBuilder.AssignMesh(terrainMesh, terrainCollider);
+        MeshBuilder.AssignMesh(terrainMesh, terrainCollider);
         transform.position = new Vector3(chunk.WorldX, 0, chunk.WorldY);
         chunk.AssignedMesh();
     }
 
-    public void UpdateBorder(Vector2Int border)
+    public void UpdateBorder(Chunk chunk, Vector2Int border)
     {
-
+        if (border.x < 0)
+            MeshBuilder.UpdateSouthChunkBorder(chunk);
     }
 }
