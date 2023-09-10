@@ -59,6 +59,18 @@ public class Player : MonoBehaviour
                 Cursor.lockState = CursorLockMode.Locked;
             return;
         }
+        
+        if (Input.GetKeyDown(KeyCode.I))
+            transform.Translate(new Vector3(0, 0, 32), Space.World);
+
+        if (Input.GetKeyDown(KeyCode.K))
+            transform.Translate(new Vector3(0, 0, -32), Space.World);
+
+        if (Input.GetKeyDown (KeyCode.L))
+            transform.Translate(new Vector3(32, 0, 0), Space.World);
+
+        if (Input.GetKeyDown(KeyCode.J))
+            transform.Translate(new Vector3(-32, 0, 0), Space.World);
 
         var inputs = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
 

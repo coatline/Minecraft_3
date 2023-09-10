@@ -30,11 +30,11 @@ public class Chunk
     public bool Generating { get; private set; }
 
     // Chunk coordinates
-    public int X { get; private set; }
-    public int Y { get; private set; }
+    public int ChunkX { get; private set; }
+    public int ChunkY { get; private set; }
 
-    public float WorldX => X * Size;
-    public float WorldY => Y * Size;
+    public float WorldX => ChunkX * Size;
+    public float WorldY => ChunkY * Size;
 
     // Does not count chunk borders
     public List<Vector3Int> VisibleBlocks { get; private set; }
@@ -52,8 +52,8 @@ public class Chunk
 
     public Chunk(int chunkX, int chunkY, byte size, World world, WorldBuilder worldBuilder, ChunkRenderer chunkRendererPrefab)
     {
-        X = chunkX;
-        Y = chunkY;
+        ChunkX = chunkX;
+        ChunkY = chunkY;
         Size = size;
         WorldBuilder = worldBuilder;
         waterLevel = world.WaterLevel;
@@ -71,6 +71,8 @@ public class Chunk
 
         generateThread = new Thread(Generate);
     }
+
+    public bool IsWithinChunkCoords(int minX, int maxX, int minY, int maxY) => !(ChunkX < minX || ChunkX > maxX || ChunkY < minY || ChunkY > maxY);
 
     public void AssignedMesh() => MeshAssigned?.Invoke(this);
 
@@ -100,8 +102,8 @@ public class Chunk
             return;
         }
 
-        X = chunkX;
-        Y = chunkY;
+        ChunkX = chunkX;
+        ChunkY = chunkY;
 
         if (initiatingQueued == false)
         {

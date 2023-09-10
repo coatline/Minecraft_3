@@ -75,10 +75,10 @@ public class MeshBuilder
         //blocksToRecheck.Clear();
 
         // Do this so we don't have to check for them every time. If they are null, don't do border checks; wait for them to generate where they will call updateborders on this
-        NorthChunk = worldBuilder.TryGetChunkAt(chunk.X, chunk.Y + 1);
-        SouthChunk = worldBuilder.TryGetChunkAt(chunk.X, chunk.Y - 1);
-        WestChunk = worldBuilder.TryGetChunkAt(chunk.X - 1, chunk.Y);
-        EastChunk = worldBuilder.TryGetChunkAt(chunk.X + 1, chunk.Y);
+        NorthChunk = worldBuilder.TryGetChunkAt(chunk.ChunkX, chunk.ChunkY + 1);
+        SouthChunk = worldBuilder.TryGetChunkAt(chunk.ChunkX, chunk.ChunkY - 1);
+        WestChunk = worldBuilder.TryGetChunkAt(chunk.ChunkX - 1, chunk.ChunkY);
+        EastChunk = worldBuilder.TryGetChunkAt(chunk.ChunkX + 1, chunk.ChunkY);
 
         if (SouthChunk == null)
             Debug.Log("Gulp... This had better be right!");

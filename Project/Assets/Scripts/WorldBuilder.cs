@@ -19,6 +19,7 @@ public class WorldBuilder
     /// The amount of chunks around the player on a given side
     readonly byte renderDistance;
     readonly Player playerPrefab;
+    readonly List<Chunk> allChunks;
     readonly World world;
     Player player;
 
@@ -36,6 +37,7 @@ public class WorldBuilder
         chunkRendererPrefab = DataLibrary.I.ChunkRendererPrefab;
         chunkMap = new Dictionary<Vector2Int, Chunk>();
         toAssignMesh = new List<Chunk>();
+        allChunks = new List<Chunk>();
 
         for (int x = -renderDistance; x <= renderDistance; x++)
             for (int y = -renderDistance; y <= renderDistance; y++)
@@ -80,6 +82,7 @@ public class WorldBuilder
         // Chunk automatically generates in a separate thread
         Chunk newChunk = new Chunk(x, y, ChunkSize, world, this, chunkRendererPrefab);
         chunkMap.Add(new Vector2Int(x, y), newChunk);
+        allChunks.Add(newChunk);
 
         // Assign the mesh outside of the thread
         newChunk.MeshGenerated += ChunkMeshGenerated;
@@ -125,9 +128,9 @@ public class WorldBuilder
 
     Vector2Int prevPlayerChunkCoords;
 
-    public void PlayerMoved(Vector2Int chunkPosition)
+    public void PlayerMoved(Vector2Int playerChunkCoords)
     {
-        if (chunkPosition == prevPlayerChunkCoords) return;
+        if (playerChunkCoords == prevPlayerChunkCoords) return;
 
         //// If we crossed a diagonal chunk border since the last frame, don't let it happen
         //if (prevPlayerChunkCoords.x != chunkPosition.x && chunkPosition.y != prevPlayerChunkCoords.y)
@@ -138,20 +141,71 @@ public class WorldBuilder
         //chunkPosition.x = Mathf.Clamp(chunkPosition.x, prevPlayerChunkCoords.x - 1, prevPlayerChunkCoords.x + 1);
 
 
-        int nxCoord = chunkPosition.x - renderDistance;
-        int nyCoord = chunkPosition.y - renderDistance;
-        int pxCoord = chunkPosition.x + renderDistance;
-        int pyCoord = chunkPosition.y + renderDistance;
+        int nxCoord = playerChunkCoords.x - renderDistance;
+        int nyCoord = playerChunkCoords.y - renderDistance;
+        int pxCoord = playerChunkCoords.x + renderDistance;
+        int pyCoord = playerChunkCoords.y + renderDistance;
 
-        int prevNXCoord = prevPlayerChunkCoords.x - renderDistance;
-        int prevNYCoord = prevPlayerChunkCoords.y - renderDistance;
-        int prevPXCoord = prevPlayerChunkCoords.x + renderDistance;
-        int prevPYCoord = prevPlayerChunkCoords.y + renderDistance;
+        //int prevNXCoord = prevPlayerChunkCoords.x - renderDistance;
+        //int prevNYCoord = prevPlayerChunkCoords.y - renderDistance;
+        //int prevPXCoord = prevPlayerChunkCoords.x + renderDistance;
+        //int prevPYCoord = prevPlayerChunkCoords.y + renderDistance;
 
-        int deltaX = chunkPosition.x - prevPlayerChunkCoords.x;
-        int deltaY = chunkPosition.y - prevPlayerChunkCoords.y;
+        //int deltaX = chunkPosition.x - prevPlayerChunkCoords.x;
+        //int deltaY = chunkPosition.y - prevPlayerChunkCoords.y;
 
+        Vector2Int moveDirection = playerChunkCoords - prevPlayerChunkCoords;
 
+        foreach (Chunk chunk in allChunks)
+        {
+            if (chunk.IsWithinChunkCoords(nxCoord, pxCoord, nyCoord, pyCoord))
+                continue;
+
+            int oldNxCoord = nxCoord - moveDirection.x;
+            int oldNyCoord = nyCoord - moveDirection.y;
+
+            Vector2Int localPos = new Vector2Int((chunk.ChunkX - oldNxCoord) - renderDistance, (chunk.ChunkY - oldNyCoord) - renderDistance);
+            Vector2Int offset = new Vector2Int(-localPos.x, -localPos.y);
+
+            Vector2Int newPos = new Vector2Int(chunk.ChunkX, chunk.ChunkY)
+                + (offset * 2) + moveDirection;
+
+            //print($"newPos: {newPos} old: {oldPos} localPos: {localPos} offset: {offset} ");
+
+            //if (chunksToLoad.TryGetValue(chunk, out ChunkLoadInfo v))
+            //    v.chunkCoords = newPos;
+            //else
+            //    chunksToLoad.Add(chunk, new ChunkLoadInfo(chunk, newPos));
+
+            //Vector2Int toWorld = Extensions.ToWorldCoords(newPos);
+
+            MoveChunk(chunk, newPos.x, newPos.y);
+            //chunk.RegenerateAt(toWorld.x, toWorld.y);
+        }
+
+        //int xDirection = 0;
+        //int yDirection = 0;
+
+        //if (deltaX > 0)
+        //{
+        //    for (int x = prevNXCoord; x < prevNXCoord + deltaX; x++)
+        //    {
+
+        //    }
+        //}
+        //else if (deltaX < 0)
+        //    xDirection = -1;
+
+        //if (deltaY > 0)
+        //{
+        //    for (int y = prevNYCoord; y < prevNYCoord + deltaY; y++)
+        //    {
+
+        //    }
+        //    yDirection = 1;
+        //}
+        //else if (deltaY < 0)
+        //    yDirection = -1;
 
 
 
@@ -199,56 +253,57 @@ public class WorldBuilder
         //    //}
         //}
 
-        int xFactor = prevPlayerChunkCoords.x + chunkPosition.x;
-        int yFactor = prevPlayerChunkCoords.y + chunkPosition.y;
+        //int xFactor = prevPlayerChunkCoords.x + chunkPosition.x;
+        //int yFactor = prevPlayerChunkCoords.y + chunkPosition.y;
 
-        // Went North
-        if (deltaY > 0)
-        {
-            for (int x = prevNXCoord; x <= prevPXCoord; x++)
-            {
-                for (int y = 0; y < deltaY; y++)
-                {
-                    // Algebra:
-                    // newX = -1(x - prevPlayerChunkCoords.x) + chunkPosition.x
-                    // newX = -x + prevPlayerChunkCoords.x + chunkPosition.x
-                    // newX = -x + xFactor
+        //// Went North
+        //if (deltaY > 0)
+        //{
+        //    for (int x = prevNXCoord; x <= prevPXCoord; x++)
+        //    {
+        //        for (int y = 0; y < deltaY; y++)
+        //        {
+        //            // Algebra:
+        //            // newX = -1(x - prevPlayerChunkCoords.x) + chunkPosition.x
+        //            // newX = -x + prevPlayerChunkCoords.x + chunkPosition.x
+        //            // newX = -x + xFactor
 
-                    // newY = -((y + prevNYCoord) - prevPlayerChunkCoords.y) + chunkPosition.y
-                    // newY = -(y + prevNYCoord) + prevPlayerChunkCoords.y + chunkPosition.y
-                    // newY = -y - prevNYCoord + prevPlayerChunkCoords.y + chunkPosition.y
+        //            // newY = -((y + prevNYCoord) - prevPlayerChunkCoords.y) + chunkPosition.y
+        //            // newY = -(y + prevNYCoord) + prevPlayerChunkCoords.y + chunkPosition.y
+        //            // newY = -y - prevNYCoord + prevPlayerChunkCoords.y + chunkPosition.y
 
-                    int newXAlgebraWay = -x + xFactor;
-                    int newYAlgebraWay = -y + yFactor - prevNYCoord;
+        //            int newXAlgebraWay = -x + xFactor;
+        //            int newYAlgebraWay = -y - prevNYCoord + yFactor;
 
-                    //int localX = x - prevPlayerChunkCoords.x;
-                    //int localY = (y + prevNYCoord) - prevPlayerChunkCoords.y;
+        //            //int localX = x - prevPlayerChunkCoords.x;
+        //            //int localY = (y + prevNYCoord) - prevPlayerChunkCoords.y;
 
-                    //int newLocalX = -localX;
-                    //int newLocalY = -localY;
+        //            //int newLocalX = -localX;
+        //            //int newLocalY = -localY;
 
-                    //int newX = newLocalX + chunkPosition.x;
-                    //int newY = newLocalY + chunkPosition.y;
+        //            //int newX = newLocalX + chunkPosition.x;
+        //            //int newY = newLocalY + chunkPosition.y;
 
-                    MoveChunk(x, prevNYCoord + y, newXAlgebraWay, newYAlgebraWay, false);
-                }
-            }
-        }
-        // Went South
-        else if (deltaY < 0)
-        {
-            for (int x = nxCoord; x <= pxCoord; x++)
-            {
-                // DeltaY will be negative
-                for (int y = 0; y < -deltaY; y++)
-                {
-                    int newXAlgebraWay = -x + xFactor;
-                    int newYAlgebraWay = -y + yFactor - prevPYCoord;
+        //            MoveChunk(x, prevNYCoord + y, newXAlgebraWay, newYAlgebraWay, false);
+        //        }
+        //    }
+        //}
+        //// Went South
+        //else if (deltaY < 0)
+        //{
+        //    // Shouldn't this be prevNXCoord and prePXCoord?
+        //    for (int x = nxCoord; x <= pxCoord; x++)
+        //    {
+        //        // DeltaY will be negative
+        //        for (int y = 0; y < -deltaY; y++)
+        //        {
+        //            int newXAlgebraWay = -x + xFactor;
+        //            int newYAlgebraWay = -y - prevPYCoord + yFactor;
 
-                    MoveChunk(x, prevPYCoord - y, newXAlgebraWay, newYAlgebraWay, false);
-                }
-            }
-        }
+        //            MoveChunk(x, prevPYCoord - y, newXAlgebraWay, newYAlgebraWay, false);
+        //        }
+        //    }
+        //}
         // Went West
         //if (prevPlayerChunkCoords.x > chunkPosition.x)
         //    for (int y = nyCoord; y <= pyCoord; y++)
@@ -277,24 +332,29 @@ public class WorldBuilder
         //        chunk.GenerateAt(newChunkCoords.x, newChunkCoords.y);
         //    }
 
-        prevPlayerChunkCoords = chunkPosition;
+        prevPlayerChunkCoords = playerChunkCoords;
 
-        void MoveChunk(int oldX, int oldY, int newX, int newY, bool tryGetChunk = true)
+        void MoveChunk(Chunk chunk, int newX, int newY)
         {
-            Vector2Int oldPosition = new Vector2Int(oldX, oldY);
+            Vector2Int oldPosition = new Vector2Int(chunk.ChunkX, chunk.ChunkY);
             Vector2Int newPosition = new Vector2Int(newX, newY);
 
-            // Get chunk at old position
-            if (chunkMap.TryGetValue(oldPosition, out Chunk chunk))
-            {
-                chunkMap.Remove(oldPosition);
-                chunkMap.Add(newPosition, chunk);
+            chunkMap.Remove(oldPosition);
+            chunkMap.Add(newPosition, chunk);
 
-                chunk.GenerateAt(newPosition.x, newPosition.y);
-            }
-            else
-                // Must have been a corner piece, already moved
-                return;
+            chunk.GenerateAt(newPosition.x, newPosition.y);
+
+            //// Get chunk at old position
+            //if (chunkMap.TryGetValue(oldPosition, out Chunk chunk))
+            //{
+            //    chunkMap.Remove(oldPosition);
+            //    chunkMap.Add(newPosition, chunk);
+
+            //    chunk.GenerateAt(newPosition.x, newPosition.y);
+            //}
+            //else
+            //    // Must have been a corner piece, already moved
+            //    return;
         }
     }
 
