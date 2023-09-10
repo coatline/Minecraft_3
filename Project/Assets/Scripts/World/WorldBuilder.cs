@@ -10,7 +10,7 @@ public class WorldBuilder
     public int ChunksLoaded { get; private set; }
     public readonly int RenderDistanceLength;
     public readonly int TotalChunks;
-    public readonly byte ChunkSize;
+    public readonly int ChunkSize;
     bool worldLoaded;
 
     readonly Dictionary<Vector2Int, Chunk> chunkMap;
@@ -24,14 +24,14 @@ public class WorldBuilder
     Player player;
 
 
-    public WorldBuilder(byte renderDistance, byte chunkSize, World world, Player playerPrefab)
+    public WorldBuilder(byte renderDistance, World world, Player playerPrefab)
     {
         RenderDistanceLength = renderDistance * 2 + 1;
         TotalChunks = RenderDistanceLength * RenderDistanceLength;
 
+        this.ChunkSize = world.WorldSettings.ChunkSize;
         this.renderDistance = renderDistance;
         this.playerPrefab = playerPrefab;
-        this.ChunkSize = chunkSize;
         this.world = world;
 
         chunkRendererPrefab = DataLibrary.I.ChunkRendererPrefab;
@@ -52,7 +52,7 @@ public class WorldBuilder
     void CreateChunkAt(int x, int y)
     {
         // Chunk automatically generates in a separate thread
-        Chunk newChunk = new Chunk(x, y, ChunkSize, world, this, chunkRendererPrefab);
+        Chunk newChunk = new Chunk(x, y, world, this, chunkRendererPrefab);
         chunkMap.Add(new Vector2Int(x, y), newChunk);
         allChunks.Add(newChunk);
 
@@ -105,7 +105,7 @@ public class WorldBuilder
 
             // Everything is initialized, spawn the player
             int localMiddle = ChunkSize / 2;
-            player = Object.Instantiate(playerPrefab, new Vector3(localMiddle, TryGetChunkAt(0, 0).GetHeightMapAt(localMiddle, localMiddle), localMiddle), Quaternion.identity);
+            player = Object.Instantiate(playerPrefab, new Vector3(localMiddle, TryGetChunkAt(0, 0).Data.GetHeightMapAt(localMiddle, localMiddle), localMiddle), Quaternion.identity);
 
             worldLoaded = true;
 
@@ -265,7 +265,7 @@ public class WorldBuilder
         if (chunk == null) { return null; }
 
         Vector3Int localCoords = GetLocalCoordsFromGlobalCoords(position.x, position.y, position.z);
-        Block block = BlockLoader.I.GetBlock(chunk[localCoords.x, localCoords.y, localCoords.z]);
+        Block block = BlockLoader.I.GetBlock(chunk.Data[localCoords.x, localCoords.y, localCoords.z]);
         //print($"global coords: {x}, {y}, {z} chunk coords: {GetChunkCoordsFromGlobalCoords(new Vector3(x, y, z))} local coords outputed: {localCoords} block detected: { block.name}");
         return block;
     }

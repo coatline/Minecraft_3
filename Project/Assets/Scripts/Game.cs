@@ -8,18 +8,20 @@ public class Game : MonoBehaviour
     public World World { get; private set; }
 
     [SerializeField] byte maxTerrainHeight;
-    [SerializeField] TMP_Text seedNumber;
+    [SerializeField] TMP_Text seedNumberText;
     [SerializeField] Player playerPrefab;
-    [SerializeField] string seed;
+    [SerializeField] string seedString;
 
     void Awake()
     {
-        World = new World(maxTerrainHeight, 255, 40, seed, playerPrefab);
+        int seed = Random.seed;
 
-        if (World.StringSeed == "")
-            seedNumber.text += World.Seed.ToString();
-        else
-            seedNumber.text += World.StringSeed;
+        if (seedString.Length != 0)
+            seed = World.GetSeedFromHash(seedString);
+
+        seedNumberText.text += seed;
+
+        World = new World(new WorldSettings(255, maxTerrainHeight, 40, 16), seed, playerPrefab);
     }
 
     private void Update()

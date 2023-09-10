@@ -33,7 +33,7 @@ public class ChunkRenderer : MonoBehaviour
     {
         Generating = true;
 
-        MeshBuilder.UpdateMesh(chunk.VisibleBlocks);
+        MeshBuilder.UpdateMesh(chunk.Data.VisibleBlocks);
         chunk.MeshComplete();
 
         Generating = false;
