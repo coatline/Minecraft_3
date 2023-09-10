@@ -80,8 +80,8 @@ public class MeshBuilder
         WestChunk = worldBuilder.TryGetChunkAt(chunk.ChunkX - 1, chunk.ChunkY);
         EastChunk = worldBuilder.TryGetChunkAt(chunk.ChunkX + 1, chunk.ChunkY);
 
-        if (SouthChunk == null)
-            Debug.Log("Gulp... This had better be right!");
+        //if (SouthChunk == null)
+        //    Debug.Log("Gulp... This had better be right!");
 
         //if (NorthChunk != null)
         //    while (NorthChunk.Generating)

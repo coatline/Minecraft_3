@@ -81,10 +81,7 @@ public class Chunk
         MeshGenerated.Invoke(this);
 
         if (queued)
-        {
             GenerateAt(queuedX, queuedY, true);
-        }
-
     }
 
     Thread generateThread;
@@ -107,9 +104,7 @@ public class Chunk
 
         if (initiatingQueued == false)
         {
-
             generateThread.Abort();
-
 
             generateThread = new Thread(Generate);
             generateThread.Start();
