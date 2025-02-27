@@ -5,25 +5,26 @@ using UnityEngine.SceneManagement;
 
 public class Player : MonoBehaviour
 {
+    [SerializeField] Camera cam;
+
     [SerializeField] float jumpHeight = 6;
     [SerializeField] float speed = 4;
     [SerializeField] float lookSensitivity;
     [SerializeField] float smoothing;
+    [SerializeField] float flySpeed;
     float walkingSpeed;
+    float prevYPosition;
 
+    
     Vector2 currentLookingPosition;
     Vector2 smoothedVelocity;
+    Vector3 velocity;
 
-    Rigidbody rb;
-    Camera cam;
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
-        cam = GetComponentInChildren<Camera>();
         walkingSpeed = speed;
-
-        rb.constraints = RigidbodyConstraints.FreezeRotation;
+        prevYPosition = transform.position.y;
 
         Cursor.lockState = CursorLockMode.Locked;
     }
@@ -32,13 +33,7 @@ public class Player : MonoBehaviour
 
     void FixedUpdate()
     {
-        var fwd = ((transform.forward * currentVelocity.y) + (transform.right * currentVelocity.x)).normalized * speed;
-        rb.velocity = new Vector3(fwd.x, rb.velocity.y, fwd.z);
-
-        if (flying)
-        {
-            rb.velocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
-        }
+        
     }
 
     private void OnDrawGizmos()
@@ -48,6 +43,17 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
+        var fwd = ((transform.forward * currentVelocity.y) + (transform.right * currentVelocity.x)).normalized * speed;
+        velocity = new Vector3(fwd.x, velocity.y, fwd.z);
+
+        if (flying)
+        {
+            velocity = new Vector3(velocity.x, 0, velocity.z);
+            transform.position = new Vector3(transform.position.x, prevYPosition, transform.position.z);
+        }
+
+        transform.Translate(velocity);
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             Cursor.lockState = CursorLockMode.None;
@@ -59,14 +65,14 @@ public class Player : MonoBehaviour
                 Cursor.lockState = CursorLockMode.Locked;
             return;
         }
-        
+
         if (Input.GetKeyDown(KeyCode.I))
             transform.Translate(new Vector3(0, 0, 32), Space.World);
 
         if (Input.GetKeyDown(KeyCode.K))
             transform.Translate(new Vector3(0, 0, -32), Space.World);
 
-        if (Input.GetKeyDown (KeyCode.L))
+        if (Input.GetKeyDown(KeyCode.L))
             transform.Translate(new Vector3(32, 0, 0), Space.World);
 
         if (Input.GetKeyDown(KeyCode.J))
@@ -81,11 +87,11 @@ public class Player : MonoBehaviour
         {
             if (Input.GetKey(KeyCode.Space))
             {
-                transform.Translate(new Vector3(0, .25f, 0));
+                transform.Translate(new Vector3(0, .25f * flySpeed, 0));
             }
             else if (Input.GetKey(KeyCode.LeftShift))
             {
-                transform.Translate(new Vector3(0, -.25f, 0));
+                transform.Translate(new Vector3(0, -.25f * flySpeed, 0));
             }
         }
         else
@@ -95,10 +101,6 @@ public class Player : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            if (rb.velocity.y <= 0 && CanJump())
-            {
-                rb.AddForce(new Vector3(0, jumpHeight), ForceMode.Impulse);
-            }
         }
 
         RotateCamera();
@@ -120,21 +122,10 @@ public class Player : MonoBehaviour
             speed *= 1.5f;
         }
 
+        prevYPosition = transform.position.y;
     }
 
     bool flying = true;
-
-    bool CanJump()
-    {
-        if (Physics.Raycast(transform.position, -transform.up, 1.01f))
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
 
     void RotateCamera()
     {

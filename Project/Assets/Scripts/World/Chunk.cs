@@ -95,6 +95,8 @@ public class Chunk
         //ThreadPool.QueueUserWorkItem(Generate);
     }
 
+    //public void InitializeValues() => GenerateInitial(null);
+    //public void InitializeMesh() => GenerateInitialMesh(null);
     public void InitializeValues() => ThreadPool.QueueUserWorkItem(GenerateInitial);
     public void InitializeMesh() => ThreadPool.QueueUserWorkItem(GenerateInitialMesh);
 

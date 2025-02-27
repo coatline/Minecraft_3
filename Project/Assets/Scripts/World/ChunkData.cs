@@ -182,8 +182,9 @@ public class ChunkData
 
                     for (int i = 0; i < depth; i++)
                     {
-                        // Set to water
-                        //blocks[x, waterLevel - i - 1, z] = 12;
+                        //if (WorldSettings.SeaLevel - i <= 0) break;
+                        //Set to water
+                        //blocks[x, WorldSettings.SeaLevel - i, z] = 12;
 
                         //if (i == 0)
                         //{
